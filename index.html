@@ -135,8 +135,8 @@
       </div>
       <div>
         <div class="text-[10px] font-bold uppercase tracking-widest text-amber-400">Maritime Area Flag Raised</div>
-        <div id="flag-banner-title" class="text-base sm:text-lg font-bold text-white tracking-tight">East China Sea</div>
-        <div id="flag-banner-sub" class="text-xs text-slate-300">Waypoint 2 of 15 &bull; Entering regional waters</div>
+        <div id="flag-banner-title" class="text-base sm:text-lg font-bold text-white tracking-tight">South China Sea</div>
+        <div id="flag-banner-sub" class="text-xs text-slate-300">Waypoint 2 of 14 &bull; Entering regional waters</div>
       </div>
     </div>
   </div>
@@ -148,7 +148,7 @@
         <span class="text-amber-400 text-sm">🚩</span>
         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Voyage Checkpoints</h2>
       </div>
-      <span id="flag-counter" class="text-xs font-mono-tech px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">1 / 15</span>
+      <span id="flag-counter" class="text-xs font-mono-tech px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">1 / 14</span>
     </div>
     <div id="waypoint-list" class="flex-1 overflow-y-auto p-2.5 space-y-1.5">
       <!-- Populated dynamically via JS -->
@@ -162,7 +162,7 @@
   <!-- Mobile Sidebar Toggle Button -->
   <button id="mobile-list-btn" onclick="toggleMobileList()" class="lg:hidden fixed bottom-24 left-4 z-30 hud-glass rounded-xl px-3.5 py-2.5 text-xs font-semibold text-sky-300 flex items-center gap-2 shadow-xl">
     <span>🚩</span>
-    <span>Route Checkpoints (<span id="mobile-flag-count">1/15</span>)</span>
+    <span>Route Checkpoints (<span id="mobile-flag-count">1/14</span>)</span>
   </button>
 
   <!-- Mobile Drawer for Checkpoints -->
@@ -186,7 +186,7 @@
       <div class="rounded-xl bg-slate-900/75 border border-slate-700/60 p-3 mb-3">
         <div class="text-[10px] uppercase tracking-wider text-sky-400 font-semibold mb-0.5">Active Maritime Zone</div>
         <div id="hud-current-area" class="text-sm font-bold text-white truncate">Port of Shanghai</div>
-        <div id="hud-next-area" class="text-[11px] text-slate-400 mt-1 truncate">Next: East China Sea</div>
+        <div id="hud-next-area" class="text-[11px] text-slate-400 mt-1 truncate">Next: South China Sea</div>
       </div>
 
       <!-- Telemetry Grid -->
@@ -282,27 +282,26 @@
 
   <script>
     // =========================================================================
-    // 1. MARITIME WAYPOINTS & DETAILED SEA-ONLY ROUTE DATA (15 Checkpoints)
+    // 1. MARITIME WAYPOINTS & DETAILED SEA-ONLY ROUTE DATA (14 Checkpoints)
     // =========================================================================
     const GLOBE_RADIUS = 100;
     const TOTAL_VOYAGE_NM = 12240;
 
     const NAMED_AREAS = [
       { id: 0, name: "Port of Shanghai", shortCode: "SHA", lat: 31.23, lon: 121.47, color: "#ef4444", accent: "#fca5a5", desc: "Yangshan & Yangtze Estuary • Voyage Origin" },
-      { id: 1, name: "East China Sea", shortCode: "ECS", lat: 27.50, lon: 123.80, color: "#0ea5e9", accent: "#7dd3fc", desc: "Heading south-southwest toward Taiwan Strait" },
-      { id: 2, name: "South China Sea", shortCode: "SCS", lat: 14.50, lon: 114.20, color: "#06b6d4", accent: "#67e8f9", desc: "Deep-water shipping lane past Paracel & Spratly basins" },
-      { id: 3, name: "Strait of Malacca", shortCode: "MAL", lat: 2.50, lon: 101.60, color: "#10b981", accent: "#6ee7b7", desc: "Strategic choke point between Sumatra & Malay Peninsula" },
-      { id: 4, name: "Indian Ocean", shortCode: "IND", lat: 7.80, lon: 73.50, color: "#3b82f6", accent: "#93c5fd", desc: "Crossing the Arabian Sea & Eight Degree Channel" },
-      { id: 5, name: "Strait of Hormuz", shortCode: "HRM", lat: 26.55, lon: 56.25, color: "#f59e0b", accent: "#fcd34d", desc: "Gulf of Oman & Strait of Hormuz gateway waypoint" },
-      { id: 6, name: "Bab-el-Mandeb", shortCode: "BAB", lat: 12.60, lon: 43.33, color: "#f97316", accent: "#fdba74", desc: "Gate of Grief connecting Gulf of Aden to Red Sea" },
-      { id: 7, name: "Red Sea", shortCode: "RED", lat: 21.20, lon: 38.20, color: "#ea580c", accent: "#fdba74", desc: "Sailing northbound up the Red Sea rift basin toward Suez" },
-      { id: 8, name: "Suez Canal", shortCode: "SUZ", lat: 30.45, lon: 32.35, color: "#eab308", accent: "#fde047", desc: "Transiting Port Tawfik through Great Bitter Lake to Port Said" },
-      { id: 9, name: "Istanbul (Bosporus)", shortCode: "IST", lat: 41.01, lon: 28.98, color: "#e11d48", accent: "#fda4af", desc: "Port Call via Aegean Sea & Dardanelles • Bosporus Strait" },
-      { id: 10, name: "Mediterranean Sea", shortCode: "MED", lat: 35.60, lon: 17.50, color: "#6366f1", accent: "#a5b4fc", desc: "Westbound transit south of Peloponnese, Sicily & Sardinia" },
-      { id: 11, name: "Strait of Gibraltar", shortCode: "GIB", lat: 35.96, lon: -5.60, color: "#8b5cf6", accent: "#c4b5fd", desc: "Pillars of Hercules • Entering the North Atlantic Ocean" },
-      { id: 12, name: "North Sea", shortCode: "NTH", lat: 51.55, lon: 2.45, color: "#14b8a6", accent: "#5eead4", desc: "Via Bay of Biscay & Dover Strait into Southern North Sea" },
-      { id: 13, name: "North Sea Anchorage", shortCode: "ANC", lat: 51.42, lon: 2.95, color: "#f59e0b", accent: "#fde68a", desc: "Wandelaar / Westkapelle Anchorage • Awaiting Scheldt Pilot" },
-      { id: 14, name: "Port of Antwerp", shortCode: "ANR", lat: 51.26, lon: 4.40, color: "#ec4899", accent: "#f9a8d4", desc: "Western Scheldt Estuary • Final Destination Reached" }
+      { id: 1, name: "South China Sea", shortCode: "SCS", lat: 14.50, lon: 114.20, color: "#06b6d4", accent: "#67e8f9", desc: "Deep-water shipping lane past Paracel & Spratly basins" },
+      { id: 2, name: "Strait of Malacca", shortCode: "MAL", lat: 2.50, lon: 101.60, color: "#10b981", accent: "#6ee7b7", desc: "Strategic choke point between Sumatra & Malay Peninsula" },
+      { id: 3, name: "Indian Ocean", shortCode: "IND", lat: 7.80, lon: 73.50, color: "#3b82f6", accent: "#93c5fd", desc: "Crossing the Arabian Sea & Eight Degree Channel" },
+      { id: 4, name: "Strait of Hormuz", shortCode: "HRM", lat: 26.55, lon: 56.25, color: "#f59e0b", accent: "#fcd34d", desc: "Gulf of Oman & Strait of Hormuz gateway waypoint" },
+      { id: 5, name: "Bab-el-Mandeb", shortCode: "BAB", lat: 12.60, lon: 43.33, color: "#f97316", accent: "#fdba74", desc: "Gate of Grief connecting Gulf of Aden to Red Sea" },
+      { id: 6, name: "Red Sea", shortCode: "RED", lat: 21.20, lon: 38.20, color: "#ea580c", accent: "#fdba74", desc: "Sailing northbound up the Red Sea rift basin toward Suez" },
+      { id: 7, name: "Suez Canal", shortCode: "SUZ", lat: 30.45, lon: 32.35, color: "#eab308", accent: "#fde047", desc: "Transiting Port Tawfik through Great Bitter Lake to Port Said" },
+      { id: 8, name: "Istanbul (Bosporus)", shortCode: "IST", lat: 41.01, lon: 28.98, color: "#e11d48", accent: "#fda4af", desc: "Port Call via Aegean Sea & Dardanelles • Bosporus Strait" },
+      { id: 9, name: "Mediterranean Sea", shortCode: "MED", lat: 35.60, lon: 17.50, color: "#6366f1", accent: "#a5b4fc", desc: "Westbound transit south of Peloponnese, Sicily & Sardinia" },
+      { id: 10, name: "Strait of Gibraltar", shortCode: "GIB", lat: 35.96, lon: -5.60, color: "#8b5cf6", accent: "#c4b5fd", desc: "Pillars of Hercules • Entering the North Atlantic Ocean" },
+      { id: 11, name: "North Sea", shortCode: "NTH", lat: 51.55, lon: 2.45, color: "#14b8a6", accent: "#5eead4", desc: "Via Bay of Biscay & Dover Strait into Southern North Sea" },
+      { id: 12, name: "North Sea Anchorage", shortCode: "ANC", lat: 51.42, lon: 2.95, color: "#f59e0b", accent: "#fde68a", desc: "Wandelaar / Westkapelle Anchorage • Awaiting Scheldt Pilot" },
+      { id: 13, name: "Port of Antwerp", shortCode: "ANR", lat: 51.26, lon: 4.40, color: "#ec4899", accent: "#f9a8d4", desc: "Western Scheldt Estuary • Final Destination Reached" }
     ];
 
     const SEA_ROUTE_NODES = [
@@ -311,62 +310,62 @@
       { lat: 29.50, lon: 123.20, areaId: 1 },
       { lat: 27.50, lon: 123.80, areaId: 1 },
       { lat: 25.20, lon: 120.60, areaId: 1 },
-      { lat: 22.80, lon: 118.50, areaId: 2 },
-      { lat: 18.50, lon: 115.80, areaId: 2 },
-      { lat: 14.50, lon: 114.20, areaId: 2 },
-      { lat: 9.20,  lon: 110.20, areaId: 2 },
-      { lat: 4.50,  lon: 105.80, areaId: 2 },
-      { lat: 1.22,  lon: 103.85, areaId: 3 },
-      { lat: 2.50,  lon: 101.60, areaId: 3 },
-      { lat: 5.40,  lon: 98.20,  areaId: 3 },
-      { lat: 6.30,  lon: 94.50,  areaId: 4 },
-      { lat: 5.60,  lon: 85.00,  areaId: 4 },
-      { lat: 5.50,  lon: 79.80,  areaId: 4 },
-      { lat: 7.80,  lon: 73.50,  areaId: 4 },
-      { lat: 14.50, lon: 66.50,  areaId: 4 },
-      { lat: 21.50, lon: 61.20,  areaId: 4 },
-      { lat: 24.80, lon: 58.20,  areaId: 5 },
-      { lat: 26.55, lon: 56.25,  areaId: 5 },
-      { lat: 25.10, lon: 57.60,  areaId: 5 },
-      { lat: 22.20, lon: 60.10,  areaId: 5 },
-      { lat: 17.50, lon: 56.80,  areaId: 5 },
-      { lat: 13.80, lon: 51.20,  areaId: 5 },
-      { lat: 12.10, lon: 45.20,  areaId: 6 },
-      { lat: 12.60, lon: 43.33,  areaId: 6 },
-      { lat: 15.50, lon: 41.60,  areaId: 7 },
-      { lat: 21.20, lon: 38.20,  areaId: 7 },
-      { lat: 27.40, lon: 34.10,  areaId: 7 },
-      { lat: 29.90, lon: 32.55,  areaId: 8 },
-      { lat: 30.45, lon: 32.35,  areaId: 8 },
-      { lat: 31.30, lon: 32.32,  areaId: 8 },
-      { lat: 33.80, lon: 30.20,  areaId: 8 },
-      { lat: 35.60, lon: 27.80,  areaId: 9 },
-      { lat: 37.60, lon: 25.60,  areaId: 9 },
-      { lat: 39.60, lon: 25.80,  areaId: 9 },
-      { lat: 40.15, lon: 26.35,  areaId: 9 },
-      { lat: 40.65, lon: 27.95,  areaId: 9 },
-      { lat: 41.01, lon: 28.98,  areaId: 9 },
-      { lat: 40.62, lon: 27.85,  areaId: 9 },
-      { lat: 40.08, lon: 26.20,  areaId: 9 },
-      { lat: 38.40, lon: 25.20,  areaId: 9 },
-      { lat: 36.20, lon: 23.60,  areaId: 9 },
-      { lat: 35.60, lon: 20.50,  areaId: 10 },
-      { lat: 35.60, lon: 17.50,  areaId: 10 },
-      { lat: 36.60, lon: 12.20,  areaId: 10 },
-      { lat: 37.60, lon: 6.50,   areaId: 10 },
-      { lat: 36.50, lon: -1.50,  areaId: 10 },
-      { lat: 35.96, lon: -5.60,  areaId: 11 },
-      { lat: 36.40, lon: -8.80,  areaId: 11 },
-      { lat: 39.50, lon: -10.20, areaId: 11 },
-      { lat: 43.60, lon: -9.80,  areaId: 11 },
-      { lat: 46.80, lon: -6.80,  areaId: 11 },
-      { lat: 48.80, lon: -5.40,  areaId: 11 },
-      { lat: 50.10, lon: -1.50,  areaId: 12 },
-      { lat: 51.05, lon: 1.45,   areaId: 12 },
-      { lat: 51.55, lon: 2.45,   areaId: 12 },
-      { lat: 51.42, lon: 2.95,   areaId: 13 },
-      { lat: 51.45, lon: 3.45,   areaId: 14 },
-      { lat: 51.26, lon: 4.40,   areaId: 14 }
+      { lat: 22.80, lon: 118.50, areaId: 1 },
+      { lat: 18.50, lon: 115.80, areaId: 1 },
+      { lat: 14.50, lon: 114.20, areaId: 1 },
+      { lat: 9.20,  lon: 110.20, areaId: 1 },
+      { lat: 4.50,  lon: 105.80, areaId: 1 },
+      { lat: 1.22,  lon: 103.85, areaId: 2 },
+      { lat: 2.50,  lon: 101.60, areaId: 2 },
+      { lat: 5.40,  lon: 98.20,  areaId: 2 },
+      { lat: 6.30,  lon: 94.50,  areaId: 3 },
+      { lat: 5.60,  lon: 85.00,  areaId: 3 },
+      { lat: 5.50,  lon: 79.80,  areaId: 3 },
+      { lat: 7.80,  lon: 73.50,  areaId: 3 },
+      { lat: 14.50, lon: 66.50,  areaId: 3 },
+      { lat: 21.50, lon: 61.20,  areaId: 3 },
+      { lat: 24.80, lon: 58.20,  areaId: 4 },
+      { lat: 26.55, lon: 56.25,  areaId: 4 },
+      { lat: 25.10, lon: 57.60,  areaId: 4 },
+      { lat: 22.20, lon: 60.10,  areaId: 4 },
+      { lat: 17.50, lon: 56.80,  areaId: 4 },
+      { lat: 13.80, lon: 51.20,  areaId: 4 },
+      { lat: 12.10, lon: 45.20,  areaId: 5 },
+      { lat: 12.60, lon: 43.33,  areaId: 5 },
+      { lat: 15.50, lon: 41.60,  areaId: 6 },
+      { lat: 21.20, lon: 38.20,  areaId: 6 },
+      { lat: 27.40, lon: 34.10,  areaId: 6 },
+      { lat: 29.90, lon: 32.55,  areaId: 7 },
+      { lat: 30.45, lon: 32.35,  areaId: 7 },
+      { lat: 31.30, lon: 32.32,  areaId: 7 },
+      { lat: 33.80, lon: 30.20,  areaId: 7 },
+      { lat: 35.60, lon: 27.80,  areaId: 8 },
+      { lat: 37.60, lon: 25.60,  areaId: 8 },
+      { lat: 39.60, lon: 25.80,  areaId: 8 },
+      { lat: 40.15, lon: 26.35,  areaId: 8 },
+      { lat: 40.65, lon: 27.95,  areaId: 8 },
+      { lat: 41.01, lon: 28.98,  areaId: 8 },
+      { lat: 40.62, lon: 27.85,  areaId: 8 },
+      { lat: 40.08, lon: 26.20,  areaId: 8 },
+      { lat: 38.40, lon: 25.20,  areaId: 8 },
+      { lat: 36.20, lon: 23.60,  areaId: 8 },
+      { lat: 35.60, lon: 20.50,  areaId: 9 },
+      { lat: 35.60, lon: 17.50,  areaId: 9 },
+      { lat: 36.60, lon: 12.20,  areaId: 9 },
+      { lat: 37.60, lon: 6.50,   areaId: 9 },
+      { lat: 36.50, lon: -1.50,  areaId: 9 },
+      { lat: 35.96, lon: -5.60,  areaId: 10 },
+      { lat: 36.40, lon: -8.80,  areaId: 10 },
+      { lat: 39.50, lon: -10.20, areaId: 10 },
+      { lat: 43.60, lon: -9.80,  areaId: 10 },
+      { lat: 46.80, lon: -6.80,  areaId: 10 },
+      { lat: 48.80, lon: -5.40,  areaId: 10 },
+      { lat: 50.10, lon: -1.50,  areaId: 11 },
+      { lat: 51.05, lon: 1.45,   areaId: 11 },
+      { lat: 51.55, lon: 2.45,   areaId: 11 },
+      { lat: 51.42, lon: 2.95,   areaId: 12 },
+      { lat: 51.45, lon: 3.45,   areaId: 13 },
+      { lat: 51.26, lon: 4.40,   areaId: 13 }
     ];
 
     // =========================================================================
@@ -767,13 +766,13 @@
       currentAreaId = areaId;
       const area = NAMED_AREAS[areaId];
 
-      if (areaId === 9 && !istanbulCallCompleted && isPlaying) {
+      if (areaId === 8 && !istanbulCallCompleted && isPlaying) {
         istanbulCallCompleted = true;
         holdPauseTimer = 2.6;
         holdBadgeLabel = 'PORT CALL • IST';
       }
 
-      if (areaId === 13 && !anchorageCompleted && isPlaying) {
+      if (areaId === 12 && !anchorageCompleted && isPlaying) {
         anchorageCompleted = true;
         holdPauseTimer = 2.2;
         holdBadgeLabel = 'AT ANCHOR • ANC';
@@ -884,8 +883,8 @@
       const trig = areaTriggers[areaIdx];
       if (!trig) return;
       progressT = trig.t;
-      if (areaIdx < 9) istanbulCallCompleted = false;
-      if (areaIdx < 13) anchorageCompleted = false;
+      if (areaIdx < 8) istanbulCallCompleted = false;
+      if (areaIdx < 12) anchorageCompleted = false;
       holdPauseTimer = 0;
       holdBadgeLabel = '';
       triggerAreaFlag(areaIdx, true);
