@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Maritime Voyage: Port of Shanghai to Port of Antwerp</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #030712;
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+    }
+    #globe-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      display: block;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Custom scrollbar for waypoint list */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(56, 189, 248, 0.7);
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 12px rgba(56, 189, 248, 0.4); }
+      50% { box-shadow: 0 0 24px rgba(56, 189, 248, 0.85); }
+    }
+    .hud-glass {
+      background: rgba(9, 14, 28, 0.76);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .flag-toast-enter {
+      animation: slideDownFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes slideDownFade {
+      0% { opacity: 0; transform: translate(-50%, -24px) scale(0.95); }
+      100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    }
+  </style>
+</head>
+<body class="text-slate-100 antialiased">
+
+  <!-- 3D Canvas Container -->
+  <div id="globe-container"></div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 transition-opacity duration-700">
+    <div class="relative w-16 h-16 mb-5">
+      <div class="absolute inset-0 rounded-full border-4 border-sky-500/20"></div>
+      <div class="absolute inset-0 rounded-full border-4 border-t-sky-400 animate-spin"></div>
+      <div class="absolute inset-3 rounded-full bg-sky-500/10 flex items-center justify-center text-sky-400 text-lg">🚢</div>
+    </div>
+    <h2 class="text-xl font-semibold tracking-wide text-white mb-1">Initializing Global Maritime Telemetry</h2>
+    <p class="text-sm text-slate-400">Synthesizing 3D Earth terrain, ocean bathymetry &amp; Suez-Hormuz shipping lanes...</p>
+  </div>
+
+  <!-- Top Header Bar -->
+  <header class="fixed top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+    <!-- Brand / Title Card -->
+    <div class="hud-glass rounded-2xl px-4 py-3 flex items-center gap-3.5 pointer-events-auto shadow-2xl">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-700 flex items-center justify-center shadow-lg shadow-sky-500/25 shrink-0">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-widest text-sky-400">Earth Maritime Nav</span>
+          <span class="px-1.5 py-0.5 text-[10px] font-mono-tech rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">LIVE AIS</span>
+        </div>
+        <h1 class="text-sm sm:text-base font-bold text-white leading-tight">
+          MV <span class="text-sky-300">EURASIA HORIZON</span> &bull; Shanghai &rarr; Antwerp
+        </h1>
+      </div>
+    </div>
+
+    <!-- Camera Mode Switcher -->
+    <div id="hud-camera-controls" class="hud-glass rounded-2xl p-1.5 flex items-center gap-1 pointer-events-auto shadow-2xl">
+      <button id="cam-chase" onclick="setCameraMode('chase')" class="cam-btn px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 bg-sky-500 text-slate-950 font-semibold shadow-md shadow-sky-500/30">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+        <span>Follow Ship</span>
+      </button>
+      <button id="cam-top" onclick="setCameraMode('top')" class="cam-btn px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+        <span>Top-Down</span>
+      </button>
+      <button id="cam-orbit" onclick="setCameraMode('orbit')" class="cam-btn px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M3.6 9h16.8M3.6 15h16.8"/></svg>
+        <span>Free Orbit</span>
+      </button>
+      <div class="w-px h-5 bg-slate-700/70 mx-0.5"></div>
+      <button id="clean-mode-btn" onclick="toggleCleanMode()" class="px-3 py-2 rounded-xl text-xs font-medium text-amber-300 hover:text-amber-200 hover:bg-amber-500/15 transition-all flex items-center gap-1.5" title="Hide UI for PowerPoint Screen Recording (Press ESC to exit)">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        <span class="hidden md:inline">Clean Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Subtle Exit Clean Mode Pill (Visible only when Clean Presentation Mode is active) -->
+  <button id="exit-clean-btn" onclick="toggleCleanMode()" class="fixed top-4 right-4 z-40 hidden hud-glass rounded-full px-3.5 py-1.5 text-[11px] font-medium text-slate-300 hover:text-white border border-slate-600/50 shadow-lg transition-all opacity-60 hover:opacity-100">
+    Exit Clean Mode (ESC)
+  </button>
+
+  <!-- Dynamic Area Flag Raised Banner (Center Top Toast) -->
+  <div id="flag-banner" class="fixed top-24 left-1/2 -translate-x-1/2 z-30 pointer-events-none hidden">
+    <div class="hud-glass rounded-2xl px-5 py-3 border-2 border-amber-400/60 shadow-2xl flex items-center gap-3.5 flag-toast-enter" style="box-shadow: 0 10px 35px rgba(251, 191, 36, 0.25);">
+      <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-amber-300 text-xl shrink-0">
+        🚩
+      </div>
+      <div>
+        <div class="text-[10px] font-bold uppercase tracking-widest text-amber-400">Maritime Area Flag Raised</div>
+        <div id="flag-banner-title" class="text-base sm:text-lg font-bold text-white tracking-tight">East China Sea</div>
+        <div id="flag-banner-sub" class="text-xs text-slate-300">Waypoint 2 of 14 &bull; Entering regional waters</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Left Collapsible Sidebar: Route Timeline & Area Flags -->
+  <aside id="sidebar-panel" class="fixed top-24 left-4 bottom-24 w-72 z-20 hidden lg:flex flex-col hud-glass rounded-2xl shadow-2xl overflow-hidden transition-all">
+    <div class="px-4 py-3 border-b border-slate-700/60 flex items-center justify-between bg-slate-900/40">
+      <div class="flex items-center gap-2">
+        <span class="text-amber-400 text-sm">🚩</span>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Voyage Checkpoints</h2>
+      </div>
+      <span id="flag-counter" class="text-xs font-mono-tech px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">1 / 14</span>
+    </div>
+    <div id="waypoint-list" class="flex-1 overflow-y-auto p-2.5 space-y-1.5">
+      <!-- Populated dynamically via JS -->
+    </div>
+    <div class="p-3 border-t border-slate-700/60 bg-slate-900/50 text-[11px] text-slate-400 flex items-center justify-between">
+      <span>Click any area to jump ship</span>
+      <span class="text-sky-400 font-medium">12,240 NM</span>
+    </div>
+  </aside>
+
+  <!-- Mobile Sidebar Toggle Button -->
+  <button id="mobile-list-btn" onclick="toggleMobileList()" class="lg:hidden fixed bottom-24 left-4 z-30 hud-glass rounded-xl px-3.5 py-2.5 text-xs font-semibold text-sky-300 flex items-center gap-2 shadow-xl">
+    <span>🚩</span>
+    <span>Route Checkpoints (<span id="mobile-flag-count">1/14</span>)</span>
+  </button>
+
+  <!-- Mobile Drawer for Checkpoints -->
+  <div id="mobile-drawer" class="lg:hidden fixed inset-x-4 bottom-36 top-24 z-30 hud-glass rounded-2xl hidden flex-col shadow-2xl overflow-hidden">
+    <div class="px-4 py-3 border-b border-slate-700/60 flex items-center justify-between bg-slate-900/70">
+      <span class="text-xs font-bold uppercase tracking-wider text-white">Maritime Regions &amp; Flags</span>
+      <button onclick="toggleMobileList()" class="text-slate-400 hover:text-white px-2 py-1 text-sm">&times;</button>
+    </div>
+    <div id="mobile-waypoint-list" class="flex-1 overflow-y-auto p-3 space-y-1.5"></div>
+  </div>
+
+  <!-- Right Floating Telemetry Card -->
+  <aside id="telemetry-panel" class="fixed top-24 right-4 w-64 sm:w-72 z-20 hidden sm:flex flex-col gap-3 pointer-events-none">
+    <div class="hud-glass rounded-2xl p-4 shadow-2xl pointer-events-auto">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Vessel Telemetry</span>
+        <span id="vessel-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">UNDERWAY</span>
+      </div>
+
+      <!-- Current Region Highlight -->
+      <div class="rounded-xl bg-slate-900/75 border border-slate-700/60 p-3 mb-3">
+        <div class="text-[10px] uppercase tracking-wider text-sky-400 font-semibold mb-0.5">Active Maritime Zone</div>
+        <div id="hud-current-area" class="text-sm font-bold text-white truncate">Port of Shanghai</div>
+        <div id="hud-next-area" class="text-[11px] text-slate-400 mt-1 truncate">Next: East China Sea</div>
+      </div>
+
+      <!-- Telemetry Grid -->
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div class="rounded-xl bg-slate-900/50 p-2.5 border border-slate-800">
+          <div class="text-[10px] text-slate-400">Coordinates</div>
+          <div id="hud-coords" class="font-mono-tech text-[11px] font-semibold text-slate-100 mt-0.5">31.23°N 121.47°E</div>
+        </div>
+        <div class="rounded-xl bg-slate-900/50 p-2.5 border border-slate-800">
+          <div class="text-[10px] text-slate-400">True Heading</div>
+          <div id="hud-heading" class="font-mono-tech text-[11px] font-semibold text-sky-300 mt-0.5">142° SE</div>
+        </div>
+        <div class="rounded-xl bg-slate-900/50 p-2.5 border border-slate-800">
+          <div class="text-[10px] text-slate-400">Distance Logged</div>
+          <div id="hud-distance" class="font-mono-tech text-[11px] font-semibold text-emerald-300 mt-0.5">0 NM</div>
+        </div>
+        <div class="rounded-xl bg-slate-900/50 p-2.5 border border-slate-800">
+          <div class="text-[10px] text-slate-400">Voyage Progress</div>
+          <div id="hud-progress" class="font-mono-tech text-[11px] font-semibold text-amber-300 mt-0.5">0.0%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Ship Mast Flag Preview Card -->
+    <div class="hud-glass rounded-2xl p-3.5 shadow-2xl pointer-events-auto flex items-center gap-3">
+      <div id="hud-flag-swatch" class="w-11 h-8 rounded-lg border border-white/25 shadow-inner flex items-center justify-center text-xs font-bold shrink-0" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">
+        SHA
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="text-[10px] uppercase tracking-wider text-slate-400">Ship Mast Pennant</div>
+        <div id="hud-flag-label" class="text-xs font-semibold text-white truncate">Port of Shanghai</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom Playback & Timeline Control Bar -->
+  <footer id="bottom-controls" class="fixed bottom-4 left-4 right-4 z-20 flex justify-center pointer-events-none">
+    <div class="hud-glass rounded-2xl px-4 py-3 w-full max-w-3xl pointer-events-auto shadow-2xl flex flex-col gap-2.5">
+      <!-- Timeline Scrubber -->
+      <div class="flex items-center gap-3">
+        <span class="text-[11px] font-mono-tech text-slate-400 shrink-0">SHA</span>
+        <div class="relative flex-1 flex items-center">
+          <input id="voyage-scrubber" type="range" min="0" max="1000" value="0" step="1"
+            class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-400" />
+        </div>
+        <span class="text-[11px] font-mono-tech text-slate-400 shrink-0">ANR</span>
+      </div>
+
+      <!-- Controls Row -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <!-- Play / Pause -->
+          <button id="play-pause-btn" onclick="togglePlayPause()" class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-sky-500/25">
+            <svg id="icon-pause" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            <svg id="icon-play" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <span id="play-pause-text">Pause</span>
+          </button>
+
+          <!-- Restart -->
+          <button onclick="restartVoyage()" class="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-medium text-xs flex items-center gap-1.5 border border-slate-700/70 transition-all" title="Restart Voyage">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span class="hidden sm:inline">Restart</span>
+          </button>
+        </div>
+
+        <!-- Compact Mobile Telemetry Readout -->
+        <div class="sm:hidden text-xs font-mono-tech text-sky-300 font-semibold truncate max-w-[140px]" id="mobile-area-readout">
+          Shanghai
+        </div>
+
+        <!-- Speed Multipliers -->
+        <div class="flex items-center gap-1 bg-slate-900/70 p-1 rounded-xl border border-slate-800">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400 px-2 hidden md:inline">Speed</span>
+          <button onclick="setSpeed(1)" data-speed="1" class="speed-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-semibold text-slate-300 hover:text-white transition-all">1x</button>
+          <button onclick="setSpeed(2)" data-speed="2" class="speed-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-semibold bg-sky-500 text-slate-950 transition-all">2x</button>
+          <button onclick="setSpeed(5)" data-speed="5" class="speed-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-semibold text-slate-300 hover:text-white transition-all">5x</button>
+          <button onclick="setSpeed(10)" data-speed="10" class="speed-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-semibold text-slate-300 hover:text-white transition-all">10x</button>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Floating 3D HTML Label for Ship Mast Flag -->
+  <div id="ship-flag-callout" class="fixed z-10 pointer-events-none transition-transform duration-75" style="left: -999px; top: -999px;">
+    <div class="flex flex-col items-center -translate-x-1/2 -translate-y-full pb-2">
+      <div id="callout-badge" class="px-3 py-1.5 rounded-xl bg-slate-950/90 border border-amber-400/80 shadow-xl backdrop-blur-md flex items-center gap-2 whitespace-nowrap">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+        <span id="callout-text" class="text-xs font-bold text-amber-300 tracking-wide">Port of Shanghai</span>
+      </div>
+      <div class="w-0.5 h-4 bg-gradient-to-b from-amber-400 to-transparent"></div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. MARITIME WAYPOINTS & DETAILED SEA-ONLY ROUTE DATA
+    // =========================================================================
+    const GLOBE_RADIUS = 100;
+    const TOTAL_VOYAGE_NM = 12240;
+
+    // The 14 key named maritime regions including Istanbul port call and North Sea Anchorage
+    const NAMED_AREAS = [
+      {
+        id: 0,
+        name: "Port of Shanghai",
+        shortCode: "SHA",
+        lat: 31.23,
+        lon: 121.47,
+        color: "#ef4444",
+        accent: "#fca5a5",
+        desc: "Yangshan & Yangtze Estuary • Voyage Origin"
+      },
+      {
+        id: 1,
+        name: "East China Sea",
+        shortCode: "ECS",
+        lat: 27.50,
+        lon: 123.80,
+        color: "#0ea5e9",
+        accent: "#7dd3fc",
+        desc: "Heading south-southwest toward Taiwan Strait"
+      },
+      {
+        id: 2,
+        name: "South China Sea",
+        shortCode: "SCS",
+        lat: 14.50,
+        lon: 114.20,
+        color: "#06b6d4",
+        accent: "#67e8f9",
+        desc: "Deep-water shipping lane past Paracel & Spratly basins"
+      },
+      {
+        id: 3,
+        name: "Strait of Malacca",
+        shortCode: "MAL",
+        lat: 2.50,
+        lon: 101.60,
+        color: "#10b981",
+        accent: "#6ee7b7",
+        desc: "Strategic choke point between Sumatra & Malay Peninsula"
+      },
+      {
+        id: 4,
+        name: "Indian Ocean",
+        shortCode: "IND",
+        lat: 7.80,
+        lon: 73.50,
+        color: "#3b82f6",
+        accent: "#93c5fd",
+        desc: "Crossing the Arabian Sea & Eight Degree Channel"
+      },
+      {
+        id: 5,
+        name: "Strait of Hormuz",
+        shortCode: "HRM",
+        lat: 26.55,
+        lon: 56.25,
+        color: "#f59e0b",
+        accent: "#fcd34d",
+        desc: "Gulf of Oman & Strait of Hormuz gateway waypoint"
+      },
+      {
+        id: 6,
+        name: "Bab-el-Mandeb",
+        shortCode: "BAB",
+        lat: 12.60,
+        lon: 43.33,
+        color: "#f97316",
+        accent: "#fdba74",
+        desc: "Gate of Grief connecting Gulf of Aden to Red Sea"
+      },
+      {
+        id: 7,
+        name: "Suez Canal",
+        shortCode: "SUZ",
+        lat: 30.45,
+        lon: 32.35,
+        color: "#eab308",
+        accent: "#fde047",
+        desc: "Transiting Port Tawfik through Great Bitter Lake to Port Said"
+      },
+      {
+        id: 8,
+        name: "Istanbul (Bosporus)",
+        shortCode: "IST",
+        lat: 41.01,
+        lon: 28.98,
+        color: "#e11d48",
+        accent: "#fda4af",
+        desc: "Port Call via Aegean Sea & Dardanelles • Bosporus Strait"
+      },
+      {
+        id: 9,
+        name: "Mediterranean Sea",
+        shortCode: "MED",
+        lat: 35.60,
+        lon: 17.50,
+        color: "#6366f1",
+        accent: "#a5b4fc",
+        desc: "Westbound transit south of Peloponnese, Sicily & Sardinia"
+      },
+      {
+        id: 10,
+        name: "Strait of Gibraltar",
+        shortCode: "GIB",
+        lat: 35.96,
+        lon: -5.60,
+        color: "#8b5cf6",
+        accent: "#c4b5fd",
+        desc: "Pillars of Hercules • Entering the North Atlantic Ocean"
+      },
+      {
+        id: 11,
+        name: "North Sea",
+        shortCode: "NTH",
+        lat: 51.55,
+        lon: 2.45,
+        color: "#14b8a6",
+        accent: "#5eead4",
+        desc: "Via Bay of Biscay & Dover Strait into Southern North Sea"
+      },
+      {
+        id: 12,
+        name: "North Sea Anchorage",
+        shortCode: "ANC",
+        lat: 51.42,
+        lon: 2.95,
+        color: "#f59e0b",
+        accent: "#fde68a",
+        desc: "Wandelaar / Westkapelle Anchorage • Awaiting Scheldt Pilot"
+      },
+      {
+        id: 13,
+        name: "Port of Antwerp",
+        shortCode: "ANR",
+        lat: 51.26,
+        lon: 4.40,
+        color: "#ec4899",
+        accent: "#f9a8d4",
+        desc: "Western Scheldt Estuary • Final Destination Reached"
+      }
+    ];
+
+    // Dense sea-only navigation nodes (strictly follows navigable straits, including Aegean/Dardanelles to Istanbul & Wandelaar Anchorage)
+    const SEA_ROUTE_NODES = [
+      { lat: 31.23, lon: 121.47, areaId: 0 }, // Port of Shanghai
+      { lat: 30.80, lon: 122.40, areaId: 0 }, // Yangtze River Mouth exit
+      { lat: 29.50, lon: 123.20, areaId: 1 }, // East China Sea
+      { lat: 27.50, lon: 123.80, areaId: 1 }, // East China Sea trigger
+      { lat: 25.20, lon: 120.60, areaId: 1 }, // North Taiwan Strait
+      { lat: 22.80, lon: 118.50, areaId: 2 }, // South Taiwan Strait -> South China Sea
+      { lat: 18.50, lon: 115.80, areaId: 2 }, // South China Sea
+      { lat: 14.50, lon: 114.20, areaId: 2 }, // South China Sea trigger
+      { lat: 9.20,  lon: 110.20, areaId: 2 }, // Southern South China Sea
+      { lat: 4.50,  lon: 105.80, areaId: 2 }, // Approach to Singapore
+      { lat: 1.22,  lon: 103.85, areaId: 3 }, // Singapore Strait
+      { lat: 2.50,  lon: 101.60, areaId: 3 }, // Strait of Malacca trigger
+      { lat: 5.40,  lon: 98.20,  areaId: 3 }, // North Malacca Strait
+      { lat: 6.30,  lon: 94.50,  areaId: 4 }, // Andaman Sea exit -> Indian Ocean
+      { lat: 5.60,  lon: 85.00,  areaId: 4 }, // Bay of Bengal south
+      { lat: 5.50,  lon: 79.80,  areaId: 4 }, // South of Sri Lanka (Dondra Head)
+      { lat: 7.80,  lon: 73.50,  areaId: 4 }, // Indian Ocean trigger (Laccadive Sea)
+      { lat: 14.50, lon: 66.50,  areaId: 4 }, // Arabian Sea northbound
+      { lat: 21.50, lon: 61.20,  areaId: 4 }, // Off Ras al Hadd (Oman)
+      { lat: 24.80, lon: 58.20,  areaId: 5 }, // Gulf of Oman
+      { lat: 26.55, lon: 56.25,  areaId: 5 }, // Strait of Hormuz trigger
+      { lat: 25.10, lon: 57.60,  areaId: 5 }, // Exiting Gulf of Oman
+      { lat: 22.20, lon: 60.10,  areaId: 5 }, // Rounding Oman coast
+      { lat: 17.50, lon: 56.80,  areaId: 5 }, // Arabian Sea south of Dhofar
+      { lat: 13.80, lon: 51.20,  areaId: 5 }, // Gulf of Aden east
+      { lat: 12.10, lon: 45.20,  areaId: 6 }, // Gulf of Aden west
+      { lat: 12.60, lon: 43.33,  areaId: 6 }, // Bab-el-Mandeb trigger
+      { lat: 15.50, lon: 41.60,  areaId: 6 }, // Southern Red Sea
+      { lat: 21.20, lon: 38.20,  areaId: 6 }, // Central Red Sea
+      { lat: 27.40, lon: 34.10,  areaId: 6 }, // Gulf of Suez entrance
+      { lat: 29.90, lon: 32.55,  areaId: 7 }, // Suez South
+      { lat: 30.45, lon: 32.35,  areaId: 7 }, // Suez Canal trigger
+      { lat: 31.30, lon: 32.32,  areaId: 7 }, // Port Said exit
+      // Detour North through Levantine Basin & Aegean Sea to Istanbul (Bosporus)
+      { lat: 33.80, lon: 30.20,  areaId: 7 }, // Eastern Levantine Basin
+      { lat: 35.60, lon: 27.80,  areaId: 8 }, // Strait of Rhodes / Karpathos
+      { lat: 37.60, lon: 25.60,  areaId: 8 }, // Central Aegean Sea (Cyclades east)
+      { lat: 39.60, lon: 25.80,  areaId: 8 }, // North Aegean approach
+      { lat: 40.15, lon: 26.35,  areaId: 8 }, // Dardanelles Strait entrance
+      { lat: 40.65, lon: 27.95,  areaId: 8 }, // Sea of Marmara
+      { lat: 41.01, lon: 28.98,  areaId: 8 }, // Istanbul (Bosporus Port Call)
+      // Return Southwest through Sea of Marmara, Dardanelles & Aegean Sea to Mediterranean
+      { lat: 40.62, lon: 27.85,  areaId: 8 }, // Sea of Marmara outbound
+      { lat: 40.08, lon: 26.20,  areaId: 8 }, // Dardanelles exit
+      { lat: 38.40, lon: 25.20,  areaId: 8 }, // Central Aegean southbound
+      { lat: 36.20, lon: 23.60,  areaId: 8 }, // Kythira Strait (south of Peloponnese)
+      { lat: 35.60, lon: 20.50,  areaId: 9 }, // Ionian Sea -> Mediterranean Sea
+      { lat: 35.60, lon: 17.50,  areaId: 9 }, // Mediterranean Sea trigger
+      { lat: 36.60, lon: 12.20,  areaId: 9 }, // Strait of Sicily
+      { lat: 37.60, lon: 6.50,   areaId: 9 }, // Algerian Basin
+      { lat: 36.50, lon: -1.50,  areaId: 9 }, // Alboran Sea
+      { lat: 35.96, lon: -5.60,  areaId: 10 }, // Strait of Gibraltar trigger
+      { lat: 36.40, lon: -8.80,  areaId: 10 }, // Off Cape St. Vincent
+      { lat: 39.50, lon: -10.20, areaId: 10 }, // Off Portugal
+      { lat: 43.60, lon: -9.80,  areaId: 10 }, // Off Cape Finisterre
+      { lat: 46.80, lon: -6.80,  areaId: 10 }, // Bay of Biscay
+      { lat: 48.80, lon: -5.40,  areaId: 10 }, // Ushant / Celtic Sea approach
+      { lat: 50.10, lon: -1.50,  areaId: 11 }, // English Channel
+      { lat: 51.05, lon: 1.45,   areaId: 11 }, // Strait of Dover
+      { lat: 51.55, lon: 2.45,   areaId: 11 }, // North Sea trigger
+      { lat: 51.42, lon: 2.95,   areaId: 12 }, // North Sea Anchorage (Wandelaar / Westkapelle)
+      { lat: 51.45, lon: 3.45,   areaId: 13 }, // Westerschelde mouth (Vlissingen)
+      { lat: 51.26, lon: 4.40,   areaId: 13 }  // Port of Antwerp
+    ];
+
+    // =========================================================================
+    // 2. THREE.JS SCENE, LIGHTING, EARTH & ATMOSPHERE SETUP
+    // =========================================================================
+    let scene, camera, renderer, controls;
+    let earthGroup, shipGroup, mastFlagMesh, mastFlagPole, wakeParticles = [];
+    let routeCurve, routeTube, activeRouteTube;
+    let areaTriggers = []; // { areaId, t }
+    let areaPins = [];     // 3D globe pins & floating flags
+
+    // Simulation state
+    let isPlaying = true;
+    let speedMultiplier = 2;
+    let progressT = 0; // 0.0 to 1.0
+    let currentAreaId = 0;
+    let cameraMode = 'chase'; // 'chase', 'top', 'orbit'
+    let flagRaiseAnim = 1.0;  // 0 to 1 animation for raising ship flag
+    let bannerTimeout = null;
+    let clock = new THREE.Clock();
+    let holdPauseTimer = 0;
+    let holdBadgeLabel = '';
+    let istanbulCallCompleted = false;
+    let anchorageCompleted = false;
+    let isCleanMode = false;
+
+    // Convert geographic coordinates (lat, lon in degrees) to 3D Cartesian coordinates
+    function latLonToVector3(lat, lon, radius) {
+      const phi = (90 - lat) * (Math.PI / 180);
+      const theta = (lon + 180) * (Math.PI / 180);
+      const x = -(radius * Math.sin(phi) * Math.cos(theta));
+      const z = radius * Math.sin(phi) * Math.sin(theta);
+      const y = radius * Math.cos(phi);
+      return new THREE.Vector3(x, y, z);
+    }
+
+    // Convert 3D Cartesian coordinates back to latitude and longitude
+    function vector3ToLatLon(vec) {
+      const r = vec.length();
+      const lat = 90 - (Math.acos(Math.max(-1, Math.min(1, vec.y / r))) * 180) / Math.PI;
+      const lon = ((Math.atan2(vec.z, -vec.x) * 180) / Math.PI) - 180;
+      const normLon = ((lon + 540) % 360) - 180;
+      return { lat, lon: normLon };
+    }
+
+    // Generate procedural high-res Earth texture fallback if external CDN fails
+    function createFallbackEarthTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2048;
+      canvas.height = 1024;
+      const ctx = canvas.getContext('2d');
+
+      // Deep ocean gradient
+      const oceanGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      oceanGrad.addColorStop(0, '#071c36');
+      oceanGrad.addColorStop(0.5, '#0b2d56');
+      oceanGrad.addColorStop(1, '#071c36');
+      ctx.fillStyle = oceanGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Subtle bathymetry grid
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 64) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 64) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+
+      // Draw stylized continents (Eurasia, Africa)
+      function drawPoly(coords, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        coords.forEach(([lon, lat], idx) => {
+          const x = ((lon + 180) / 360) * canvas.width;
+          const y = ((90 - lat) / 180) * canvas.height;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Eurasia simplified coastline
+      drawPoly([
+        [-9, 36], [-9, 43], [-4, 48], [2, 51], [8, 54], [10, 58], [20, 55], [28, 60],
+        [40, 67], [70, 72], [110, 74], [140, 70], [170, 65], [160, 54], [140, 45],
+        [130, 35], [121, 31], [118, 24], [108, 21], [109, 12], [103, 1.5], [99, 8],
+        [95, 16], [88, 22], [80, 8], [72, 20], [67, 25], [56, 26], [48, 30], [58, 22],
+        [54, 16], [44, 13], [35, 28], [32, 31], [35, 36], [26, 40], [23, 37], [15, 38],
+        [12, 44], [5, 43], [0, 38], [-5.5, 36]
+      ], '#263829');
+
+      // Africa simplified coastline
+      drawPoly([
+        [-5.5, 35.8], [10, 37], [12, 33], [25, 31.5], [32.3, 31.2], [34, 27], [43.2, 12.5],
+        [51, 11.8], [40, -5], [35, -20], [28, -33], [18, -34], [12, -16], [9, 4],
+        [-8, 5], [-17, 15], [-13, 28]
+      ], '#3a3525');
+
+      // UK & Ireland
+      drawPoly([[-5, 50], [1.5, 51.2], [0, 58], [-6, 57]], '#2c4230');
+
+      const tex = new THREE.CanvasTexture(canvas);
+      return tex;
+    }
+
+    // Create a dynamic canvas texture for the 3D flag on the ship & globe
+    function createFlagTexture(areaObj) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+
+      // Gradient background
+      const grad = ctx.createLinearGradient(0, 0, 512, 256);
+      grad.addColorStop(0, areaObj.color);
+      grad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 256);
+
+      // Decorative nautical stripes
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.fillRect(0, 0, 512, 22);
+      ctx.fillRect(0, 234, 512, 22);
+
+      // Left hoist bar
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 18, 256);
+
+      // Border
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, 506, 250);
+
+      // Area Code Badge
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+      ctx.beginPath();
+      ctx.roundRect(36, 36, 92, 42, 10);
+      ctx.fill();
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 22px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(areaObj.shortCode, 82, 57);
+
+      // Area Name Text
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      const fontSize = areaObj.name.length > 17 ? 32 : 38;
+      ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+      ctx.fillText(areaObj.name.toUpperCase(), 36, 138);
+
+      // Subtitle
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '500 20px Inter, sans-serif';
+      ctx.fillText(`WAYPOINT ${areaObj.id + 1} OF ${NAMED_AREAS.length}`, 36, 192);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    function initScene() {
+      const container = document.getElementById('globe-container');
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x02050e);
+
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+      camera.position.set(-60, 85, 165);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      container.appendChild(renderer.domElement);
+
+      // OrbitControls
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.minDistance = 104.5;
+      controls.maxDistance = 360;
+      controls.rotateSpeed = 0.65;
+
+      // Starfield Background
+      createStarfield();
+
+      // Lighting (Sun + Ambient Hemisphere for realistic Google Earth look)
+      const ambientLight = new THREE.AmbientLight(0x93c5fd, 0.85);
+      scene.add(ambientLight);
+
+      const sunLight = new THREE.DirectionalLight(0xffffff, 1.35);
+      sunLight.position.set(180, 140, 160);
+      scene.add(sunLight);
+
+      const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.45);
+      rimLight.position.set(-160, -80, -140);
+      scene.add(rimLight);
+
+      // Build Earth Globe
+      earthGroup = new THREE.Group();
+      scene.add(earthGroup);
+      buildEarth();
+
+      // Build Maritime Route & Waypoint Flags
+      buildMaritimeRoute();
+
+      // Build Detailed 3D Containership
+      buildContainership();
+
+      // Build HUD Checkpoint List
+      populateWaypointSidebar();
+
+      // Initialize first area
+      triggerAreaFlag(0, false);
+
+      // Event Listeners
+      window.addEventListener('resize', onWindowResize);
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isCleanMode) {
+          toggleCleanMode();
+        }
+      });
+      setupScrubber();
+
+      // Hide loading screen smoothly
+      setTimeout(() => {
+        const loader = document.getElementById('loading-screen');
+        loader.style.opacity = '0';
+        setTimeout(() => loader.style.display = 'none', 700);
+      }, 600);
+    }
+
+    function createStarfield() {
+      const starGeo = new THREE.BufferGeometry();
+      const count = 3500;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+
+      for (let i = 0; i < count; i++) {
+        const r = 450 + Math.random() * 550;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+
+        positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = r * Math.cos(phi);
+        positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+
+        const shade = 0.65 + Math.random() * 0.35;
+        colors[i * 3] = shade * (0.9 + Math.random() * 0.1);
+        colors[i * 3 + 1] = shade * (0.92 + Math.random() * 0.08);
+        colors[i * 3 + 2] = shade;
+      }
+
+      starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      starGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+      const starMat = new THREE.PointsMaterial({
+        size: 1.35,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.85
+      });
+
+      const stars = new THREE.Points(starGeo, starMat);
+      scene.add(stars);
+    }
+
+    function buildEarth() {
+      const sphereGeo = new THREE.SphereGeometry(GLOBE_RADIUS, 96, 96);
+      const fallbackTex = createFallbackEarthTexture();
+
+      const earthMat = new THREE.MeshPhongMaterial({
+        map: fallbackTex,
+        specular: new THREE.Color(0x1e3a5f),
+        shininess: 18
+      });
+
+      // Load realistic NASA Blue Marble satellite texture
+      const texLoader = new THREE.TextureLoader();
+      texLoader.setCrossOrigin('anonymous');
+      texLoader.load(
+        'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+        (loadedTex) => {
+          earthMat.map = loadedTex;
+          earthMat.needsUpdate = true;
+        },
+        undefined,
+        () => {}
+      );
+
+      // Load bump map for terrain relief
+      texLoader.load(
+        'https://unpkg.com/three-globe/example/img/earth-topology.png',
+        (bumpTex) => {
+          earthMat.bumpMap = bumpTex;
+          earthMat.bumpScale = 0.85;
+          earthMat.needsUpdate = true;
+        }
+      );
+
+      const earthMesh = new THREE.Mesh(sphereGeo, earthMat);
+      earthGroup.add(earthMesh);
+
+      // Subtle Cloud Layer
+      const cloudGeo = new THREE.SphereGeometry(GLOBE_RADIUS + 0.45, 72, 72);
+      const cloudMat = new THREE.MeshLambertMaterial({
+        transparent: true,
+        opacity: 0.22,
+        depthWrite: false
+      });
+      texLoader.load(
+        'https://unpkg.com/three-globe/example/img/earth-clouds.png',
+        (cloudTex) => {
+          cloudMat.map = cloudTex;
+          cloudMat.needsUpdate = true;
+        }
+      );
+      const cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+      cloudMesh.name = 'cloudLayer';
+      earthGroup.add(cloudMesh);
+
+      // Atmospheric Fresnel Glow Halo
+      const atmosGeo = new THREE.SphereGeometry(GLOBE_RADIUS + 2.8, 64, 64);
+      const atmosMat = new THREE.ShaderMaterial({
+        vertexShader: `
+          varying vec3 vNormal;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vNormal;
+          void main() {
+            float intensity = pow(0.62 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.2);
+            gl_FragColor = vec4(0.22, 0.68, 1.0, 1.0) * intensity * 1.15;
+          }
+        `,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false
+      });
+      const atmosMesh = new THREE.Mesh(atmosGeo, atmosMat);
+      earthGroup.add(atmosMesh);
+    }
+
+    function buildMaritimeRoute() {
+      const points = SEA_ROUTE_NODES.map(node => latLonToVector3(node.lat, node.lon, GLOBE_RADIUS + 0.14));
+
+      // CatmullRomCurve3 with centripetal parameterization prevents overshoot loops into land
+      routeCurve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.35);
+
+      // Full route line (translucent cyan shipping lane)
+      const tubeGeo = new THREE.TubeGeometry(routeCurve, 700, 0.12, 8, false);
+      const tubeMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.38
+      });
+      routeTube = new THREE.Mesh(tubeGeo, tubeMat);
+      earthGroup.add(routeTube);
+
+      // Compute exact curve parameter `t` for each of the 14 named maritime areas
+      const sampledPoints = routeCurve.getSpacedPoints(1800);
+      areaTriggers = NAMED_AREAS.map(area => {
+        const targetVec = latLonToVector3(area.lat, area.lon, GLOBE_RADIUS + 0.14);
+        let bestIdx = 0;
+        let minDist = Infinity;
+        for (let i = 0; i < sampledPoints.length; i++) {
+          const d = sampledPoints[i].distanceToSquared(targetVec);
+          if (d < minDist) {
+            minDist = d;
+            bestIdx = i;
+          }
+        }
+        return {
+          areaId: area.id,
+          t: bestIdx / 1800
+        };
+      });
+
+      // Ensure monotonic ordering of triggers
+      areaTriggers[0].t = 0.0;
+      areaTriggers[areaTriggers.length - 1].t = 0.996;
+
+      // Place 3D Beacon Markers & Mini Globe Flags at each of the 14 maritime areas
+      NAMED_AREAS.forEach((area) => {
+        const pos = latLonToVector3(area.lat, area.lon, GLOBE_RADIUS + 0.12);
+        const normal = pos.clone().normalize();
+
+        const markerGroup = new THREE.Group();
+        markerGroup.position.copy(pos);
+        markerGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+
+        // Glowing ocean ring
+        const ringGeo = new THREE.RingGeometry(0.32, 0.52, 24);
+        ringGeo.rotateX(-Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: new THREE.Color(area.color),
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.75
+        });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        markerGroup.add(ringMesh);
+
+        // Slender buoy mast
+        const poleGeo = new THREE.CylinderGeometry(0.03, 0.03, 1.5, 8);
+        poleGeo.translate(0, 0.75, 0);
+        const poleMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 });
+        const poleMesh = new THREE.Mesh(poleGeo, poleMat);
+        markerGroup.add(poleMesh);
+
+        // Mini pennant flag on globe (scales up when ship passes!)
+        const flagGeo = new THREE.PlaneGeometry(1.45, 0.75);
+        flagGeo.translate(0.75, 1.15, 0);
+        const flagMat = new THREE.MeshBasicMaterial({
+          map: createFlagTexture(area),
+          side: THREE.DoubleSide
+        });
+        const flagMesh = new THREE.Mesh(flagGeo, flagMat);
+        flagMesh.scale.set(0.01, 0.01, 0.01);
+        markerGroup.add(flagMesh);
+
+        earthGroup.add(markerGroup);
+        areaPins.push({ markerGroup, ringMesh, flagMesh, raised: false });
+      });
+    }
+
+    function buildContainership() {
+      shipGroup = new THREE.Group();
+
+      const s = 0.24;
+      const vesselModel = new THREE.Group();
+      vesselModel.scale.set(s, s, s);
+
+      // 1. Lower Red Antifouling Hull
+      const lowerHullGeo = new THREE.BoxGeometry(1.7, 0.55, 8.2);
+      const lowerHullMat = new THREE.MeshPhongMaterial({ color: 0xb91c1c, shininess: 30 });
+      const lowerHull = new THREE.Mesh(lowerHullGeo, lowerHullMat);
+      lowerHull.position.set(0, 0.28, 0);
+      vesselModel.add(lowerHull);
+
+      // 2. Upper Dark Navy/Black Hull
+      const upperHullGeo = new THREE.BoxGeometry(1.82, 0.65, 8.6);
+      const upperHullMat = new THREE.MeshPhongMaterial({ color: 0x0f172a, shininess: 45 });
+      const upperHull = new THREE.Mesh(upperHullGeo, upperHullMat);
+      upperHull.position.set(0, 0.85, 0.15);
+      vesselModel.add(upperHull);
+
+      // 3. Pointed Bulbous Bow (+Z is forward)
+      const bowGeo = new THREE.ConeGeometry(1.18, 2.5, 4);
+      bowGeo.rotateY(Math.PI / 4);
+      bowGeo.rotateX(Math.PI / 2);
+      const bowMesh = new THREE.Mesh(bowGeo, upperHullMat);
+      bowMesh.scale.set(0.78, 0.52, 1.0);
+      bowMesh.position.set(0, 0.82, 5.4);
+      vesselModel.add(bowMesh);
+
+      // 4. White Accommodation Superstructure & Navigation Bridge (Aft-midship)
+      const bridgeBase = new THREE.Mesh(
+        new THREE.BoxGeometry(1.65, 1.75, 1.25),
+        new THREE.MeshPhongMaterial({ color: 0xf8fafc })
+      );
+      bridgeBase.position.set(0, 1.95, -2.1);
+      vesselModel.add(bridgeBase);
+
+      // Bridge Wings
+      const bridgeWings = new THREE.Mesh(
+        new THREE.BoxGeometry(2.25, 0.35, 0.65),
+        new THREE.MeshPhongMaterial({ color: 0xffffff })
+      );
+      bridgeWings.position.set(0, 2.75, -1.95);
+      vesselModel.add(bridgeWings);
+
+      // Dark tinted bridge windows
+      const bridgeWindows = new THREE.Mesh(
+        new THREE.BoxGeometry(2.28, 0.18, 0.68),
+        new THREE.MeshBasicMaterial({ color: 0x0284c7 })
+      );
+      bridgeWindows.position.set(0, 2.78, -1.94);
+      vesselModel.add(bridgeWindows);
+
+      // Exhaust Funnel (Red & Black)
+      const funnel = new THREE.Mesh(
+        new THREE.BoxGeometry(0.55, 1.1, 0.75),
+        new THREE.MeshPhongMaterial({ color: 0xdc2626 })
+      );
+      funnel.position.set(0, 2.2, -3.1);
+      vesselModel.add(funnel);
+
+      // 5. Colorful Intermodal Shipping Container Stacks (TEUs)
+      const containerColors = [0x0284c7, 0xdc2626, 0x059669, 0xd97706, 0x4f46e5, 0xe11d48, 0x0d9488];
+      const containerGeo = new THREE.BoxGeometry(0.52, 0.42, 1.15);
+
+      const bayZPositions = [3.3, 2.05, 0.8, -0.45, -3.7];
+      bayZPositions.forEach((zPos, bIdx) => {
+        const tiers = zPos < -3 ? 2 : 3;
+        for (let row = -1; row <= 1; row++) {
+          for (let tier = 0; tier < tiers; tier++) {
+            const color = containerColors[(bIdx * 7 + (row + 1) * 3 + tier) % containerColors.length];
+            const cMat = new THREE.MeshPhongMaterial({ color, shininess: 25 });
+            const cMesh = new THREE.Mesh(containerGeo, cMat);
+            cMesh.position.set(row * 0.56, 1.38 + tier * 0.44, zPos);
+            vesselModel.add(cMesh);
+          }
+        }
+      });
+
+      // 6. Prominent Ship Flagpole & Animated Raising Area Flag on Bridge Top
+      mastFlagPole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06, 0.08, 4.4, 8),
+        new THREE.MeshBasicMaterial({ color: 0xf8fafc })
+      );
+      mastFlagPole.position.set(0, 4.8, -2.0);
+      vesselModel.add(mastFlagPole);
+
+      // Golden finial ball on top of mast
+      const finial = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
+      );
+      finial.position.set(0, 7.05, -2.0);
+      vesselModel.add(finial);
+
+      // Dynamic Flag Banner attached to the mast (rises from bottom to top of pole!)
+      const flagGeo = new THREE.PlaneGeometry(3.6, 1.85, 12, 6);
+      flagGeo.translate(1.85, 0, 0);
+      const flagMat = new THREE.MeshBasicMaterial({
+        map: createFlagTexture(NAMED_AREAS[0]),
+        side: THREE.DoubleSide
+      });
+      mastFlagMesh = new THREE.Mesh(flagGeo, flagMat);
+      mastFlagMesh.position.set(0, 6.0, -2.0);
+      vesselModel.add(mastFlagMesh);
+
+      shipGroup.add(vesselModel);
+      earthGroup.add(shipGroup);
+
+      // Initialize ocean wake trail particles
+      const wakeGeo = new THREE.SphereGeometry(0.14, 6, 6);
+      for (let i = 0; i < 36; i++) {
+        const wMat = new THREE.MeshBasicMaterial({
+          color: 0xe0f2fe,
+          transparent: true,
+          opacity: 0
+        });
+        const wMesh = new THREE.Mesh(wakeGeo, wMat);
+        earthGroup.add(wMesh);
+        wakeParticles.push({ mesh: wMesh, life: 0, maxLife: 1.4 });
+      }
+    }
+
+    // =========================================================================
+    // 3. WAYPOINT SIDEBAR & FLAG TRIGGER LOGIC
+    // =========================================================================
+    function populateWaypointSidebar() {
+      const desktopList = document.getElementById('waypoint-list');
+      const mobileList = document.getElementById('mobile-waypoint-list');
+
+      const html = NAMED_AREAS.map((area, idx) => `
+        <button onclick="jumpToArea(${idx})" id="wp-btn-${idx}"
+          class="wp-item w-full text-left px-3 py-2.5 rounded-xl border transition-all flex items-center justify-between gap-2
+          ${idx === 0 ? 'bg-sky-500/20 border-sky-400/50 text-white' : 'bg-slate-900/40 border-slate-800/80 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span id="wp-dot-${idx}" class="w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0
+              ${idx === 0 ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-400'}">
+              ${idx + 1}
+            </span>
+            <div class="min-w-0">
+              <div class="text-xs font-semibold truncate">${area.name}</div>
+              <div class="text-[10px] text-slate-400 truncate">${area.shortCode} &bull; ${area.lat.toFixed(1)}°, ${area.lon.toFixed(1)}°</div>
+            </div>
+          </div>
+          <span id="wp-flag-${idx}" class="text-sm transition-transform ${idx === 0 ? 'scale-110' : 'opacity-25 grayscale'}">🚩</span>
+        </button>
+      `).join('');
+
+      desktopList.innerHTML = html;
+      mobileList.innerHTML = html;
+    }
+
+    function updateWaypointSidebarUI(activeIdx) {
+      let raisedCount = 0;
+      const totalStops = NAMED_AREAS.length;
+      NAMED_AREAS.forEach((_, idx) => {
+        const isPassed = idx <= activeIdx;
+        if (isPassed) raisedCount++;
+
+        document.querySelectorAll(`#wp-btn-${idx}`).forEach(btn => {
+          if (idx === activeIdx) {
+            btn.className = 'wp-item w-full text-left px-3 py-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 bg-sky-500/20 border-sky-400/60 text-white shadow-md';
+          } else if (isPassed) {
+            btn.className = 'wp-item w-full text-left px-3 py-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 bg-slate-800/45 border-emerald-500/30 text-slate-200 hover:bg-slate-800/80';
+          } else {
+            btn.className = 'wp-item w-full text-left px-3 py-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 bg-slate-900/40 border-slate-800/80 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200';
+          }
+        });
+
+        document.querySelectorAll(`#wp-dot-${idx}`).forEach(dot => {
+          if (idx === activeIdx) {
+            dot.className = 'w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 bg-amber-400 text-slate-950';
+          } else if (isPassed) {
+            dot.className = 'w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 bg-emerald-500/25 text-emerald-300 border border-emerald-500/40';
+          } else {
+            dot.className = 'w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 bg-slate-800 text-slate-400';
+          }
+        });
+
+        document.querySelectorAll(`#wp-flag-${idx}`).forEach(flg => {
+          flg.className = isPassed ? 'text-sm transition-transform scale-110' : 'text-sm transition-transform opacity-25 grayscale';
+        });
+      });
+
+      document.getElementById('flag-counter').textContent = `${raisedCount} / ${totalStops}`;
+      document.getElementById('mobile-flag-count').textContent = `${raisedCount}/${totalStops}`;
+    }
+
+    function triggerAreaFlag(areaId, showToast = true) {
+      currentAreaId = areaId;
+      const area = NAMED_AREAS[areaId];
+
+      // Trigger brief port-call pause when arriving at Istanbul (Bosporus)
+      if (areaId === 8 && !istanbulCallCompleted && isPlaying) {
+        istanbulCallCompleted = true;
+        holdPauseTimer = 2.6;
+        holdBadgeLabel = 'PORT CALL • IST';
+      }
+
+      // Trigger brief anchorage hold when arriving at North Sea Anchorage (Wandelaar)
+      if (areaId === 12 && !anchorageCompleted && isPlaying) {
+        anchorageCompleted = true;
+        holdPauseTimer = 2.2;
+        holdBadgeLabel = 'AT ANCHOR • ANC';
+      }
+
+      // 1. Update 3D Ship Mast Flag texture and trigger hoisting animation
+      if (mastFlagMesh) {
+        mastFlagMesh.material.map = createFlagTexture(area);
+        mastFlagMesh.material.needsUpdate = true;
+        flagRaiseAnim = 0.0;
+      }
+
+      // 2. Raise all globe flags up to this waypoint
+      areaPins.forEach((pin, idx) => {
+        pin.raised = idx <= areaId;
+      });
+
+      // 3. Update HUD labels & swatches
+      document.getElementById('hud-current-area').textContent = area.name;
+      document.getElementById('mobile-area-readout').textContent = area.name;
+      const nextArea = NAMED_AREAS[areaId + 1];
+      document.getElementById('hud-next-area').textContent = nextArea
+        ? `Next: ${nextArea.name}`
+        : 'Destination Reached • Berth Secured';
+
+      const swatch = document.getElementById('hud-flag-swatch');
+      swatch.textContent = area.shortCode;
+      swatch.style.background = `linear-gradient(135deg, ${area.color}, #0f172a)`;
+      document.getElementById('hud-flag-label').textContent = area.name;
+      document.getElementById('callout-text').textContent = `🚩 ${area.name}`;
+
+      updateWaypointSidebarUI(areaId);
+
+      // 4. Show dramatic top-center notification banner
+      if (showToast && !isCleanMode) {
+        const banner = document.getElementById('flag-banner');
+        document.getElementById('flag-banner-title').textContent = area.name;
+        document.getElementById('flag-banner-sub').textContent = `Waypoint ${areaId + 1} of ${NAMED_AREAS.length} • ${area.desc}`;
+
+        banner.classList.remove('hidden');
+        const inner = banner.firstElementChild;
+        inner.classList.remove('flag-toast-enter');
+        void inner.offsetWidth;
+        inner.classList.add('flag-toast-enter');
+
+        if (bannerTimeout) clearTimeout(bannerTimeout);
+        bannerTimeout = setTimeout(() => {
+          banner.classList.add('hidden');
+        }, 3200);
+      }
+    }
+
+    // =========================================================================
+    // 4. CAMERA, PLAYBACK & UI CONTROLS
+    // =========================================================================
+    function setCameraMode(mode) {
+      cameraMode = mode;
+      document.querySelectorAll('.cam-btn').forEach(btn => {
+        btn.className = 'cam-btn px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5';
+      });
+      const activeBtn = document.getElementById(`cam-${mode}`);
+      if (activeBtn) {
+        activeBtn.className = 'cam-btn px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 bg-sky-500 text-slate-950 font-semibold shadow-md shadow-sky-500/30';
+      }
+      if (mode === 'orbit') {
+        controls.target.set(0, 0, 0);
+      }
+    }
+
+    function setSpeed(mult) {
+      speedMultiplier = mult;
+      document.querySelectorAll('.speed-btn').forEach(btn => {
+        if (Number(btn.dataset.speed) === mult) {
+          btn.className = 'speed-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-semibold bg-sky-500 text-slate-950 transition-all';
+        } else {
+          btn.className = 'speed-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-semibold text-slate-300 hover:text-white transition-all';
+        }
+      });
+    }
+
+    function togglePlayPause() {
+      if (progressT >= 0.999 && !isPlaying) {
+        progressT = 0;
+      }
+      isPlaying = !isPlaying;
+      updatePlayPauseUI();
+    }
+
+    function updatePlayPauseUI() {
+      const iconPause = document.getElementById('icon-pause');
+      const iconPlay = document.getElementById('icon-play');
+      const text = document.getElementById('play-pause-text');
+      const statusBadge = document.getElementById('vessel-status-badge');
+
+      if (isPlaying) {
+        iconPause.classList.remove('hidden');
+        iconPlay.classList.add('hidden');
+        text.textContent = 'Pause';
+        statusBadge.textContent = 'UNDERWAY';
+        statusBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+      } else {
+        iconPause.classList.add('hidden');
+        iconPlay.classList.remove('hidden');
+        text.textContent = progressT >= 0.999 ? 'Replay' : 'Resume';
+        statusBadge.textContent = progressT >= 0.999 ? 'MOORED' : 'HOLDING';
+        statusBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+      }
+    }
+
+    function restartVoyage() {
+      progressT = 0;
+      isPlaying = true;
+      holdPauseTimer = 0;
+      holdBadgeLabel = '';
+      istanbulCallCompleted = false;
+      anchorageCompleted = false;
+      updatePlayPauseUI();
+      triggerAreaFlag(0, true);
+    }
+
+    function toggleCleanMode() {
+      isCleanMode = !isCleanMode;
+      const header = document.querySelector('header');
+      const sidebar = document.getElementById('sidebar-panel');
+      const telemetry = document.getElementById('telemetry-panel');
+      const footer = document.getElementById('bottom-controls');
+      const mobileBtn = document.getElementById('mobile-list-btn');
+      const exitBtn = document.getElementById('exit-clean-btn');
+
+      if (isCleanMode) {
+        header.classList.add('hidden');
+        sidebar.classList.remove('lg:flex');
+        telemetry.classList.remove('sm:flex');
+        footer.classList.add('hidden');
+        mobileBtn.classList.add('hidden');
+        exitBtn.classList.remove('hidden');
+      } else {
+        header.classList.remove('hidden');
+        sidebar.classList.add('lg:flex');
+        telemetry.classList.add('sm:flex');
+        footer.classList.remove('hidden');
+        mobileBtn.classList.remove('hidden');
+        exitBtn.classList.add('hidden');
+      }
+    }
+
+    function jumpToArea(areaIdx) {
+      const trig = areaTriggers[areaIdx];
+      if (!trig) return;
+      progressT = trig.t;
+      if (areaIdx < 8) {
+        istanbulCallCompleted = false;
+      }
+      if (areaIdx < 12) {
+        anchorageCompleted = false;
+      }
+      holdPauseTimer = 0;
+      holdBadgeLabel = '';
+      triggerAreaFlag(areaIdx, true);
+      document.getElementById('voyage-scrubber').value = Math.round(progressT * 1000);
+
+      // Close mobile drawer if open
+      const drawer = document.getElementById('mobile-drawer');
+      if (!drawer.classList.contains('hidden')) {
+        drawer.classList.add('hidden');
+      }
+    }
+
+    function toggleMobileList() {
+      const drawer = document.getElementById('mobile-drawer');
+      drawer.classList.toggle('hidden');
+      drawer.classList.toggle('flex');
+    }
+
+    function setupScrubber() {
+      const scrubber = document.getElementById('voyage-scrubber');
+      scrubber.addEventListener('input', (e) => {
+        progressT = Number(e.target.value) / 1000;
+        let matchedArea = 0;
+        for (let i = 0; i < areaTriggers.length; i++) {
+          if (progressT >= areaTriggers[i].t - 0.002) {
+            matchedArea = areaTriggers[i].areaId;
+          }
+        }
+        if (matchedArea !== currentAreaId) {
+          triggerAreaFlag(matchedArea, true);
+        }
+      });
+    }
+
+    // =========================================================================
+    // 5. ANIMATION LOOP, SHIP KINEMATICS & CAMERA TRACKING
+    // =========================================================================
+    let wakeSpawnTimer = 0;
+    let wakeIndex = 0;
+
+    function updateShipAndTelemetry(dt, elapsed) {
+      const statusBadge = document.getElementById('vessel-status-badge');
+
+      if (isPlaying) {
+        if (holdPauseTimer > 0) {
+          // Vessel holds briefly at Istanbul port call or North Sea Anchorage
+          holdPauseTimer -= dt;
+          statusBadge.textContent = holdBadgeLabel;
+          statusBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/25 text-amber-300 border border-amber-500/40';
+        } else {
+          // Base voyage duration ~68 seconds at 1x speed
+          const baseRate = 0.0145;
+          progressT += baseRate * speedMultiplier * dt;
+
+          if (holdBadgeLabel !== '') {
+            holdBadgeLabel = '';
+            statusBadge.textContent = 'UNDERWAY';
+            statusBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          }
+
+          if (progressT >= 1.0) {
+            progressT = 1.0;
+            isPlaying = false;
+            triggerAreaFlag(NAMED_AREAS.length - 1, true);
+            updatePlayPauseUI();
+          }
+          document.getElementById('voyage-scrubber').value = Math.round(progressT * 1000);
+        }
+      }
+
+      // Check area boundary crossings
+      let activeArea = 0;
+      for (let i = 0; i < areaTriggers.length; i++) {
+        if (progressT >= areaTriggers[i].t - 0.001) {
+          activeArea = areaTriggers[i].areaId;
+        }
+      }
+      if (activeArea !== currentAreaId) {
+        triggerAreaFlag(activeArea, true);
+      }
+
+      // Position & Orient Ship along 3D Curve
+      const clampedT = Math.max(0, Math.min(0.9995, progressT));
+      const pos = routeCurve.getPointAt(clampedT);
+      const tangent = routeCurve.getTangentAt(clampedT).normalize();
+      const upNormal = pos.clone().normalize();
+
+      // Construct orthonormal basis where +Y is radial up and +Z is forward tangent
+      const right = new THREE.Vector3().crossVectors(upNormal, tangent).normalize();
+      const correctedForward = new THREE.Vector3().crossVectors(right, upNormal).normalize();
+
+      const rotMatrix = new THREE.Matrix4().makeBasis(right, upNormal, correctedForward);
+      shipGroup.position.copy(pos);
+      shipGroup.quaternion.setFromRotationMatrix(rotMatrix);
+
+      // Gentle ocean roll/pitch motion
+      const rollAngle = Math.sin(elapsed * 2.4) * 0.045;
+      const pitchAngle = Math.cos(elapsed * 1.9) * 0.025;
+      shipGroup.rotateZ(rollAngle);
+      shipGroup.rotateX(pitchAngle);
+
+      // Animate Mast Flag Hoisting & Wind Flutter
+      if (flagRaiseAnim < 1.0) {
+        flagRaiseAnim = Math.min(1.0, flagRaiseAnim + dt * 2.2);
+      }
+      if (mastFlagMesh) {
+        const ease = 1 - Math.pow(1 - flagRaiseAnim, 3);
+        mastFlagMesh.position.y = 3.4 + ease * 2.6;
+        mastFlagMesh.scale.setScalar(0.35 + ease * 0.65);
+
+        const posAttr = mastFlagMesh.geometry.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+          const vx = posAttr.getX(i);
+          const wave = Math.sin(vx * 2.4 - elapsed * 9.0) * (vx * 0.075);
+          posAttr.setZ(i, wave);
+        }
+        posAttr.needsUpdate = true;
+      }
+
+      // Animate Globe Checkpoint Pins & Raised Flags
+      areaPins.forEach((pin, idx) => {
+        const pulse = 1 + Math.sin(elapsed * 3.5 + idx) * 0.14;
+        pin.ringMesh.scale.set(pulse, pulse, 1);
+
+        const targetScale = pin.raised ? 1.0 : 0.01;
+        pin.flagMesh.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), dt * 6);
+      });
+
+      // Spawn White Ocean Wake Particles behind stern (only when moving)
+      if (isPlaying && holdPauseTimer <= 0) {
+        wakeSpawnTimer += dt * speedMultiplier;
+        if (wakeSpawnTimer > 0.06) {
+          wakeSpawnTimer = 0;
+          const wp = wakeParticles[wakeIndex];
+          wakeIndex = (wakeIndex + 1) % wakeParticles.length;
+          const sternOffset = correctedForward.clone().multiplyScalar(-1.1);
+          wp.mesh.position.copy(pos).add(sternOffset);
+          wp.life = wp.maxLife;
+          wp.mesh.scale.setScalar(0.6);
+        }
+      }
+
+      wakeParticles.forEach(wp => {
+        if (wp.life > 0) {
+          wp.life -= dt;
+          const ratio = Math.max(0, wp.life / wp.maxLife);
+          wp.mesh.material.opacity = ratio * 0.55;
+          wp.mesh.scale.setScalar(0.6 + (1 - ratio) * 2.2);
+        } else {
+          wp.mesh.material.opacity = 0;
+        }
+      });
+
+      // Update Live Telemetry Readouts
+      const { lat, lon } = vector3ToLatLon(pos);
+      const latDir = lat >= 0 ? 'N' : 'S';
+      const lonDir = lon >= 0 ? 'E' : 'W';
+      document.getElementById('hud-coords').textContent = `${Math.abs(lat).toFixed(2)}°${latDir} ${Math.abs(lon).toFixed(2)}°${lonDir}`;
+
+      // Calculate Compass Heading from forward vector
+      const northPole = new THREE.Vector3(0, 1, 0);
+      const eastVec = new THREE.Vector3().crossVectors(northPole, upNormal).normalize();
+      const northVec = new THREE.Vector3().crossVectors(upNormal, eastVec).normalize();
+      const hdgRad = Math.atan2(correctedForward.dot(eastVec), correctedForward.dot(northVec));
+      const hdgDeg = Math.round(((hdgRad * 180 / Math.PI) + 360) % 360);
+      const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+      const cardinal = dirs[Math.round(hdgDeg / 45) % 8];
+      document.getElementById('hud-heading').textContent = `${String(hdgDeg).padStart(3, '0')}° ${cardinal}`;
+
+      const distNM = Math.round(progressT * TOTAL_VOYAGE_NM);
+      document.getElementById('hud-distance').textContent = `${distNM.toLocaleString()} NM`;
+      document.getElementById('hud-progress').textContent = `${(progressT * 100).toFixed(1)}%`;
+
+      // Update Floating 3D HTML Callout above Ship Mast
+      updateFloatingCallout(pos, upNormal);
+
+      // Update Camera Modes
+      updateCameraPosition(pos, upNormal, correctedForward, dt);
+    }
+
+    function updateFloatingCallout(shipPos, upNormal) {
+      const callout = document.getElementById('ship-flag-callout');
+      const mastTopWorld = shipPos.clone().add(upNormal.clone().multiplyScalar(1.95));
+
+      const toCam = camera.position.clone().sub(mastTopWorld).normalize();
+      const facing = upNormal.dot(toCam);
+
+      if (facing < -0.15) {
+        callout.style.display = 'none';
+        return;
+      }
+      callout.style.display = 'block';
+
+      const projected = mastTopWorld.project(camera);
+      const x = (projected.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (-projected.y * 0.5 + 0.5) * window.innerHeight;
+
+      callout.style.left = `${x}px`;
+      callout.style.top = `${y}px`;
+    }
+
+    function updateCameraPosition(shipPos, upNormal, forwardVec, dt) {
+      if (cameraMode === 'chase') {
+        const desiredTarget = shipPos.clone();
+        controls.target.lerp(desiredTarget, Math.min(1, dt * 6));
+
+        const desiredCamPos = shipPos.clone()
+          .add(upNormal.clone().multiplyScalar(19))
+          .sub(forwardVec.clone().multiplyScalar(18));
+
+        camera.position.lerp(desiredCamPos, Math.min(1, dt * 3.5));
+      } else if (cameraMode === 'top') {
+        const desiredTarget = shipPos.clone();
+        controls.target.lerp(desiredTarget, Math.min(1, dt * 6));
+
+        const desiredCamPos = shipPos.clone().add(upNormal.clone().multiplyScalar(58));
+        camera.position.lerp(desiredCamPos, Math.min(1, dt * 3.5));
+      }
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const dt = Math.min(clock.getDelta(), 0.1);
+      const elapsed = clock.getElapsedTime();
+
+      const clouds = earthGroup.getObjectByName('cloudLayer');
+      if (clouds) {
+        clouds.rotation.y += dt * 0.004;
+      }
+
+      updateShipAndTelemetry(dt, elapsed);
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // Start simulation once window loads
+    window.onload = function () {
+      initScene();
+      animate();
+    };
+  </script>
+</body>
+</html>
