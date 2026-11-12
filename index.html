@@ -105,7 +105,7 @@
     </div>
 
     <!-- Camera Mode Switcher -->
-    <div class="hud-glass rounded-2xl p-1.5 flex items-center gap-1 pointer-events-auto shadow-2xl">
+    <div id="hud-camera-controls" class="hud-glass rounded-2xl p-1.5 flex items-center gap-1 pointer-events-auto shadow-2xl">
       <button id="cam-chase" onclick="setCameraMode('chase')" class="cam-btn px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 bg-sky-500 text-slate-950 font-semibold shadow-md shadow-sky-500/30">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
         <span>Follow Ship</span>
@@ -118,8 +118,18 @@
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M3.6 9h16.8M3.6 15h16.8"/></svg>
         <span>Free Orbit</span>
       </button>
+      <div class="w-px h-5 bg-slate-700/70 mx-0.5"></div>
+      <button id="clean-mode-btn" onclick="toggleCleanMode()" class="px-3 py-2 rounded-xl text-xs font-medium text-amber-300 hover:text-amber-200 hover:bg-amber-500/15 transition-all flex items-center gap-1.5" title="Hide UI for PowerPoint Screen Recording (Press ESC to exit)">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        <span class="hidden md:inline">Clean Mode</span>
+      </button>
     </div>
   </header>
+
+  <!-- Subtle Exit Clean Mode Pill (Visible only when Clean Presentation Mode is active) -->
+  <button id="exit-clean-btn" onclick="toggleCleanMode()" class="fixed top-4 right-4 z-40 hidden hud-glass rounded-full px-3.5 py-1.5 text-[11px] font-medium text-slate-300 hover:text-white border border-slate-600/50 shadow-lg transition-all opacity-60 hover:opacity-100">
+    Exit Clean Mode (ESC)
+  </button>
 
   <!-- Dynamic Area Flag Raised Banner (Center Top Toast) -->
   <div id="flag-banner" class="fixed top-24 left-1/2 -translate-x-1/2 z-30 pointer-events-none hidden">
@@ -130,7 +140,7 @@
       <div>
         <div class="text-[10px] font-bold uppercase tracking-widest text-amber-400">Maritime Area Flag Raised</div>
         <div id="flag-banner-title" class="text-base sm:text-lg font-bold text-white tracking-tight">East China Sea</div>
-        <div id="flag-banner-sub" class="text-xs text-slate-300">Waypoint 2 of 12 &bull; Entering regional waters</div>
+        <div id="flag-banner-sub" class="text-xs text-slate-300">Waypoint 2 of 14 &bull; Entering regional waters</div>
       </div>
     </div>
   </div>
@@ -142,21 +152,21 @@
         <span class="text-amber-400 text-sm">🚩</span>
         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Voyage Checkpoints</h2>
       </div>
-      <span id="flag-counter" class="text-xs font-mono-tech px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">1 / 12</span>
+      <span id="flag-counter" class="text-xs font-mono-tech px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">1 / 14</span>
     </div>
     <div id="waypoint-list" class="flex-1 overflow-y-auto p-2.5 space-y-1.5">
       <!-- Populated dynamically via JS -->
     </div>
     <div class="p-3 border-t border-slate-700/60 bg-slate-900/50 text-[11px] text-slate-400 flex items-center justify-between">
       <span>Click any area to jump ship</span>
-      <span class="text-sky-400 font-medium">11,480 NM</span>
+      <span class="text-sky-400 font-medium">12,240 NM</span>
     </div>
   </aside>
 
   <!-- Mobile Sidebar Toggle Button -->
   <button id="mobile-list-btn" onclick="toggleMobileList()" class="lg:hidden fixed bottom-24 left-4 z-30 hud-glass rounded-xl px-3.5 py-2.5 text-xs font-semibold text-sky-300 flex items-center gap-2 shadow-xl">
     <span>🚩</span>
-    <span>Route Checkpoints (<span id="mobile-flag-count">1/12</span>)</span>
+    <span>Route Checkpoints (<span id="mobile-flag-count">1/14</span>)</span>
   </button>
 
   <!-- Mobile Drawer for Checkpoints -->
@@ -169,7 +179,7 @@
   </div>
 
   <!-- Right Floating Telemetry Card -->
-  <aside class="fixed top-24 right-4 w-64 sm:w-72 z-20 hidden sm:flex flex-col gap-3 pointer-events-none">
+  <aside id="telemetry-panel" class="fixed top-24 right-4 w-64 sm:w-72 z-20 hidden sm:flex flex-col gap-3 pointer-events-none">
     <div class="hud-glass rounded-2xl p-4 shadow-2xl pointer-events-auto">
       <div class="flex items-center justify-between mb-3">
         <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Vessel Telemetry</span>
@@ -187,7 +197,7 @@
       <div class="grid grid-cols-2 gap-2 text-xs">
         <div class="rounded-xl bg-slate-900/50 p-2.5 border border-slate-800">
           <div class="text-[10px] text-slate-400">Coordinates</div>
-          <div id="hud-coords" class="font-mono-tech text-[11px] font-semibold text-slate-100 mt-0.5">30.63°N 122.07°E</div>
+          <div id="hud-coords" class="font-mono-tech text-[11px] font-semibold text-slate-100 mt-0.5">31.23°N 121.47°E</div>
         </div>
         <div class="rounded-xl bg-slate-900/50 p-2.5 border border-slate-800">
           <div class="text-[10px] text-slate-400">True Heading</div>
@@ -207,7 +217,7 @@
     <!-- Active Ship Mast Flag Preview Card -->
     <div class="hud-glass rounded-2xl p-3.5 shadow-2xl pointer-events-auto flex items-center gap-3">
       <div id="hud-flag-swatch" class="w-11 h-8 rounded-lg border border-white/25 shadow-inner flex items-center justify-center text-xs font-bold shrink-0" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">
-        CN
+        SHA
       </div>
       <div class="min-w-0 flex-1">
         <div class="text-[10px] uppercase tracking-wider text-slate-400">Ship Mast Pennant</div>
@@ -217,13 +227,14 @@
   </aside>
 
   <!-- Bottom Playback & Timeline Control Bar -->
-  <footer class="fixed bottom-4 left-4 right-4 z-20 flex justify-center pointer-events-none">
-    <div class="hud-glass rounded-2xl px-4 py-3 w-full max-w-4xl pointer-events-auto shadow-2xl flex flex-col gap-2.5">
-      <!-- Interactive Scrubber Bar -->
+  <footer id="bottom-controls" class="fixed bottom-4 left-4 right-4 z-20 flex justify-center pointer-events-none">
+    <div class="hud-glass rounded-2xl px-4 py-3 w-full max-w-3xl pointer-events-auto shadow-2xl flex flex-col gap-2.5">
+      <!-- Timeline Scrubber -->
       <div class="flex items-center gap-3">
         <span class="text-[11px] font-mono-tech text-slate-400 shrink-0">SHA</span>
         <div class="relative flex-1 flex items-center">
-          <input id="voyage-scrubber" type="range" min="0" max="1000" value="0" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-400" />
+          <input id="voyage-scrubber" type="range" min="0" max="1000" value="0" step="1"
+            class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-400" />
         </div>
         <span class="text-[11px] font-mono-tech text-slate-400 shrink-0">ANR</span>
       </div>
@@ -278,19 +289,19 @@
     // 1. MARITIME WAYPOINTS & DETAILED SEA-ONLY ROUTE DATA
     // =========================================================================
     const GLOBE_RADIUS = 100;
-    const TOTAL_VOYAGE_NM = 11480;
+    const TOTAL_VOYAGE_NM = 12240;
 
-    // The 12 key named maritime regions requested by the user
+    // The 14 key named maritime regions including Istanbul port call and North Sea Anchorage
     const NAMED_AREAS = [
       {
         id: 0,
         name: "Port of Shanghai",
         shortCode: "SHA",
-        lat: 30.63,
-        lon: 122.07,
+        lat: 31.23,
+        lon: 121.47,
         color: "#ef4444",
         accent: "#fca5a5",
-        desc: "Yangshan Deep-Water Port • Voyage Origin"
+        desc: "Yangshan & Yangtze Estuary • Voyage Origin"
       },
       {
         id: 1,
@@ -354,6 +365,16 @@
       },
       {
         id: 7,
+        name: "Red Sea",
+        shortCode: "RED",
+        lat: 21.20,
+        lon: 38.20,
+        color: "#ea580c",
+        accent: "#fdba74",
+        desc: "Sailing northbound up the Red Sea rift basin toward Suez"
+      },
+      {
+        id: 8,
         name: "Suez Canal",
         shortCode: "SUZ",
         lat: 30.45,
@@ -363,17 +384,27 @@
         desc: "Transiting Port Tawfik through Great Bitter Lake to Port Said"
       },
       {
-        id: 8,
+        id: 9,
+        name: "Istanbul (Bosporus)",
+        shortCode: "IST",
+        lat: 41.01,
+        lon: 28.98,
+        color: "#e11d48",
+        accent: "#fda4af",
+        desc: "Port Call via Aegean Sea & Dardanelles • Bosporus Strait"
+      },
+      {
+        id: 10,
         name: "Mediterranean Sea",
         shortCode: "MED",
         lat: 35.60,
         lon: 17.50,
         color: "#6366f1",
         accent: "#a5b4fc",
-        desc: "Westbound transit south of Crete, Sicily & Sardinia"
+        desc: "Westbound transit south of Peloponnese, Sicily & Sardinia"
       },
       {
-        id: 9,
+        id: 11,
         name: "Strait of Gibraltar",
         shortCode: "GIB",
         lat: 35.96,
@@ -383,7 +414,7 @@
         desc: "Pillars of Hercules • Entering the North Atlantic Ocean"
       },
       {
-        id: 10,
+        id: 12,
         name: "North Sea",
         shortCode: "NTH",
         lat: 51.55,
@@ -393,20 +424,98 @@
         desc: "Via Bay of Biscay & Dover Strait into Southern North Sea"
       },
       {
-        id: 11,
+        id: 13,
+        name: "North Sea Anchorage",
+        shortCode: "ANC",
+        lat: 51.42,
+        lon: 2.95,
+        color: "#f59e0b",
+        accent: "#fde68a",
+        desc: "Wandelaar / Westkapelle Anchorage • Awaiting Scheldt Pilot"
+      },
+      {
+        id: 14,
         name: "Port of Antwerp",
         shortCode: "ANR",
-        lat: 51.31,
-        lon: 4.28,
+        lat: 51.26,
+        lon: 4.40,
         color: "#ec4899",
         accent: "#f9a8d4",
         desc: "Western Scheldt Estuary • Final Destination Reached"
       }
     ];
 
-    // Dense sea-only navigation nodes (prevents any spline clipping across India, Arabia, Iberia, or Brittany)
+    // Dense sea-only navigation nodes (strictly follows navigable straits, including Red Sea, Aegean/Dardanelles to Istanbul & Wandelaar Anchorage)
     const SEA_ROUTE_NODES = [
-      { lat: 30.63, lon: 122.07, areaId: 0 }, // Port of Shanghai
+      { lat: 31.23, lon: 121.47, areaId: 0 }, // Port of Shanghai
+      { lat: 30.80, lon: 122.40, areaId: 0 }, // Yangtze River Mouth exit
+      { lat: 29.50, lon: 123.20, areaId: 1 }, // East China Sea
+      { lat: 27.50, lon: 123.80, areaId: 1 }, // East China Sea trigger
+      { lat: 25.20, lon: 120.60, areaId: 1 }, // North Taiwan Strait
+      { lat: 22.80, lon: 118.50, areaId: 2 }, // South Taiwan Strait -> South China Sea
+      { lat: 18.50, lon: 115.80, areaId: 2 }, // South China Sea
+      { lat: 14.50, lon: 114.20, areaId: 2 }, // South China Sea trigger
+      { lat: 9.20,  lon: 110.20, areaId: 2 }, // Southern South China Sea
+      { lat: 4.50,  lon: 105.80, areaId: 2 }, // Approach to Singapore
+      { lat: 1.22,  lon: 103.85, areaId: 3 }, // Singapore Strait
+      { lat: 2.50,  lon: 101.60, areaId: 3 }, // Strait of Malacca trigger
+      { lat: 5.40,  lon: 98.20,  areaId: 3 }, // North Malacca Strait
+      { lat: 6.30,  lon: 94.50,  areaId: 4 }, // Andaman Sea exit -> Indian Ocean
+      { lat: 5.60,  lon: 85.00,  areaId: 4 }, // Bay of Bengal south
+      { lat: 5.50,  lon: 79.80,  areaId: 4 }, // South of Sri Lanka (Dondra Head)
+      { lat: 7.80,  lon: 73.50,  areaId: 4 }, // Indian Ocean trigger (Laccadive Sea)
+      { lat: 14.50, lon: 66.50,  areaId: 4 }, // Arabian Sea northbound
+      { lat: 21.50, lon: 61.20,  areaId: 4 }, // Off Ras al Hadd (Oman)
+      { lat: 24.80, lon: 58.20,  areaId: 5 }, // Gulf of Oman
+      { lat: 26.55, lon: 56.25,  areaId: 5 }, // Strait of Hormuz trigger
+      { lat: 25.10, lon: 57.60,  areaId: 5 }, // Exiting Gulf of Oman
+      { lat: 22.20, lon: 60.10,  areaId: 5 }, // Rounding Oman coast
+      { lat: 17.50, lon: 56.80,  areaId: 5 }, // Arabian Sea south of Dhofar
+      { lat: 13.80, lon: 51.20,  areaId: 5 }, // Gulf of Aden east
+      { lat: 12.10, lon: 45.20,  areaId: 6 }, // Gulf of Aden west
+      { lat: 12.60, lon: 43.33,  areaId: 6 }, // Bab-el-Mandeb trigger
+      { lat: 15.50, lon: 41.60,  areaId: 7 }, // Southern Red Sea -> Red Sea
+      { lat: 21.20, lon: 38.20,  areaId: 7 }, // Red Sea trigger
+      { lat: 27.40, lon: 34.10,  areaId: 7 }, // Gulf of Suez entrance
+      { lat: 29.90, lon: 32.55,  areaId: 8 }, // Suez South
+      { lat: 30.45, lon: 32.35,  areaId: 8 }, // Suez Canal trigger
+      { lat: 31.30, lon: 32.32,  areaId: 8 }, // Port Said exit
+      // Detour North through Levantine Basin & Aegean Sea to Istanbul (Bosporus)
+      { lat: 33.80, lon: 30.20,  areaId: 8 }, // Eastern Levantine Basin
+      { lat: 35.60, lon: 27.80,  areaId: 9 }, // Strait of Rhodes / Karpathos -> Istanbul
+      { lat: 37.60, lon: 25.60,  areaId: 9 }, // Central Aegean Sea (Cyclades east)
+      { lat: 39.60, lon: 25.80,  areaId: 9 }, // North Aegean approach
+      { lat: 40.15, lon: 26.35,  areaId: 9 }, // Dardanelles Strait entrance
+      { lat: 40.65, lon: 27.95,  areaId: 9 }, // Sea of Marmara
+      { lat: 41.01, lon: 28.98,  areaId: 9 }, // Istanbul (Bosporus Port Call)
+      // Return Southwest through Sea of Marmara, Dardanelles & Aegean Sea to Mediterranean
+      { lat: 40.62, lon: 27.85,  areaId: 9 }, // Sea of Marmara outbound
+      { lat: 40.08, lon: 26.20,  areaId: 9 }, // Dardanelles exit
+      { lat: 38.40, lon: 25.20,  areaId: 9 }, // Central Aegean southbound
+      { lat: 36.20, lon: 23.60,  areaId: 9 }, // Kythira Strait (south of Peloponnese)
+      { lat: 35.60, lon: 20.50,  areaId: 10 }, // Ionian Sea -> Mediterranean Sea
+      { lat: 35.60, lon: 17.50,  areaId: 10 }, // Mediterranean Sea trigger
+      { lat: 36.60, lon: 12.20,  areaId: 10 }, // Strait of Sicily
+      { lat: 37.60, lon: 6.50,   areaId: 10 }, // Algerian Basin
+      { lat: 36.50, lon: -1.50,  areaId: 10 }, // Alboran Sea
+      { lat: 35.96, lon: -5.60,  areaId: 11 }, // Strait of Gibraltar trigger
+      { lat: 36.40, lon: -8.80,  areaId: 11 }, // Off Cape St. Vincent
+      { lat: 39.50, lon: -10.20, areaId: 11 }, // Off Portugal
+      { lat: 43.60, lon: -9.80,  areaId: 11 }, // Off Cape Finisterre
+      { lat: 46.80, lon: -6.80,  areaId: 11 }, // Bay of Biscay
+      { lat: 48.80, lon: -5.40,  areaId: 11 }, // Ushant / Celtic Sea approach
+      { lat: 50.10, lon: -1.50,  areaId: 12 }, // English Channel -> North Sea
+      { lat: 51.05, lon: 1.45,   areaId: 12 }, // Strait of Dover
+      { lat: 51.55, lon: 2.45,   areaId: 12 }, // North Sea trigger
+      { lat: 51.42, lon: 2.95,   areaId: 13 }, // North Sea Anchorage (Wandelaar / Westkapelle)
+      { lat: 51.45, lon: 3.45,   areaId: 14 }, // Westerschelde mouth (Vlissingen) -> Antwerp
+      { lat: 51.26, lon: 4.40,   areaId: 14 }  // Port of Antwerp
+    ];
+
+    // Dense sea-only navigation nodes (strictly follows navigable straits, including Aegean/Dardanelles to Istanbul & Wandelaar Anchorage)
+    const SEA_ROUTE_NODES = [
+      { lat: 31.23, lon: 121.47, areaId: 0 }, // Port of Shanghai
+      { lat: 30.80, lon: 122.40, areaId: 0 }, // Yangtze River Mouth exit
       { lat: 29.50, lon: 123.20, areaId: 1 }, // East China Sea
       { lat: 27.50, lon: 123.80, areaId: 1 }, // East China Sea trigger
       { lat: 25.20, lon: 120.60, areaId: 1 }, // North Taiwan Strait
@@ -438,23 +547,36 @@
       { lat: 29.90, lon: 32.55,  areaId: 7 }, // Suez South
       { lat: 30.45, lon: 32.35,  areaId: 7 }, // Suez Canal trigger
       { lat: 31.30, lon: 32.32,  areaId: 7 }, // Port Said exit
-      { lat: 33.60, lon: 27.50,  areaId: 8 }, // Eastern Med
-      { lat: 34.60, lon: 22.50,  areaId: 8 }, // South of Crete
-      { lat: 35.60, lon: 17.50,  areaId: 8 }, // Mediterranean Sea trigger
-      { lat: 36.60, lon: 12.20,  areaId: 8 }, // Strait of Sicily
-      { lat: 37.60, lon: 6.50,   areaId: 8 }, // Algerian Basin
-      { lat: 36.50, lon: -1.50,  areaId: 8 }, // Alboran Sea
-      { lat: 35.96, lon: -5.60,  areaId: 9 }, // Strait of Gibraltar trigger
-      { lat: 36.40, lon: -8.80,  areaId: 9 }, // Off Cape St. Vincent
-      { lat: 39.50, lon: -10.20, areaId: 9 }, // Off Portugal
-      { lat: 43.60, lon: -9.80,  areaId: 9 }, // Off Cape Finisterre
-      { lat: 46.80, lon: -6.80,  areaId: 9 }, // Bay of Biscay
-      { lat: 48.80, lon: -5.40,  areaId: 9 }, // Ushant / Celtic Sea approach
-      { lat: 50.10, lon: -1.50,  areaId: 10 }, // English Channel
-      { lat: 51.05, lon: 1.45,   areaId: 10 }, // Strait of Dover
-      { lat: 51.55, lon: 2.45,   areaId: 10 }, // North Sea trigger
-      { lat: 51.45, lon: 3.45,   areaId: 11 }, // Westerschelde mouth (Vlissingen)
-      { lat: 51.31, lon: 4.28,   areaId: 11 }  // Port of Antwerp
+      // Detour North through Levantine Basin & Aegean Sea to Istanbul (Bosporus)
+      { lat: 33.80, lon: 30.20,  areaId: 7 }, // Eastern Levantine Basin
+      { lat: 35.60, lon: 27.80,  areaId: 8 }, // Strait of Rhodes / Karpathos
+      { lat: 37.60, lon: 25.60,  areaId: 8 }, // Central Aegean Sea (Cyclades east)
+      { lat: 39.60, lon: 25.80,  areaId: 8 }, // North Aegean approach
+      { lat: 40.15, lon: 26.35,  areaId: 8 }, // Dardanelles Strait entrance
+      { lat: 40.65, lon: 27.95,  areaId: 8 }, // Sea of Marmara
+      { lat: 41.01, lon: 28.98,  areaId: 8 }, // Istanbul (Bosporus Port Call)
+      // Return Southwest through Sea of Marmara, Dardanelles & Aegean Sea to Mediterranean
+      { lat: 40.62, lon: 27.85,  areaId: 8 }, // Sea of Marmara outbound
+      { lat: 40.08, lon: 26.20,  areaId: 8 }, // Dardanelles exit
+      { lat: 38.40, lon: 25.20,  areaId: 8 }, // Central Aegean southbound
+      { lat: 36.20, lon: 23.60,  areaId: 8 }, // Kythira Strait (south of Peloponnese)
+      { lat: 35.60, lon: 20.50,  areaId: 9 }, // Ionian Sea -> Mediterranean Sea
+      { lat: 35.60, lon: 17.50,  areaId: 9 }, // Mediterranean Sea trigger
+      { lat: 36.60, lon: 12.20,  areaId: 9 }, // Strait of Sicily
+      { lat: 37.60, lon: 6.50,   areaId: 9 }, // Algerian Basin
+      { lat: 36.50, lon: -1.50,  areaId: 9 }, // Alboran Sea
+      { lat: 35.96, lon: -5.60,  areaId: 10 }, // Strait of Gibraltar trigger
+      { lat: 36.40, lon: -8.80,  areaId: 10 }, // Off Cape St. Vincent
+      { lat: 39.50, lon: -10.20, areaId: 10 }, // Off Portugal
+      { lat: 43.60, lon: -9.80,  areaId: 10 }, // Off Cape Finisterre
+      { lat: 46.80, lon: -6.80,  areaId: 10 }, // Bay of Biscay
+      { lat: 48.80, lon: -5.40,  areaId: 10 }, // Ushant / Celtic Sea approach
+      { lat: 50.10, lon: -1.50,  areaId: 11 }, // English Channel
+      { lat: 51.05, lon: 1.45,   areaId: 11 }, // Strait of Dover
+      { lat: 51.55, lon: 2.45,   areaId: 11 }, // North Sea trigger
+      { lat: 51.42, lon: 2.95,   areaId: 12 }, // North Sea Anchorage (Wandelaar / Westkapelle)
+      { lat: 51.45, lon: 3.45,   areaId: 13 }, // Westerschelde mouth (Vlissingen)
+      { lat: 51.26, lon: 4.40,   areaId: 13 }  // Port of Antwerp
     ];
 
     // =========================================================================
@@ -475,30 +597,32 @@
     let flagRaiseAnim = 1.0;  // 0 to 1 animation for raising ship flag
     let bannerTimeout = null;
     let clock = new THREE.Clock();
+    let holdPauseTimer = 0;
+    let holdBadgeLabel = '';
+    let istanbulCallCompleted = false;
+    let anchorageCompleted = false;
+    let isCleanMode = false;
 
-    // Helper: Convert Lat/Lon (degrees) to 3D Vector3 on Sphere
-    function latLonToVector3(lat, lon, radius = GLOBE_RADIUS) {
+    // Convert geographic coordinates (lat, lon in degrees) to 3D Cartesian coordinates
+    function latLonToVector3(lat, lon, radius) {
       const phi = (90 - lat) * (Math.PI / 180);
       const theta = (lon + 180) * (Math.PI / 180);
-      const x = -radius * Math.sin(phi) * Math.cos(theta);
+      const x = -(radius * Math.sin(phi) * Math.cos(theta));
       const z = radius * Math.sin(phi) * Math.sin(theta);
       const y = radius * Math.cos(phi);
       return new THREE.Vector3(x, y, z);
     }
 
-    // Helper: Convert 3D Vector3 back to Lat/Lon
+    // Convert 3D Cartesian coordinates back to latitude and longitude
     function vector3ToLatLon(vec) {
       const r = vec.length();
-      const phi = Math.acos(Math.max(-1, Math.min(1, vec.y / r)));
-      const lat = 90 - (phi * 180 / Math.PI);
-      let theta = Math.atan2(vec.z, -vec.x);
-      let lon = (theta * 180 / Math.PI) - 180;
-      if (lon < -180) lon += 360;
-      if (lon > 180) lon -= 360;
-      return { lat, lon };
+      const lat = 90 - (Math.acos(Math.max(-1, Math.min(1, vec.y / r))) * 180) / Math.PI;
+      const lon = ((Math.atan2(vec.z, -vec.x) * 180) / Math.PI) - 180;
+      const normLon = ((lon + 540) % 360) - 180;
+      return { lat, lon: normLon };
     }
 
-    // Generate high-res procedural fallback/enhancement Earth texture if external CORS fails
+    // Generate procedural high-res Earth texture fallback if external CDN fails
     function createFallbackEarthTexture() {
       const canvas = document.createElement('canvas');
       canvas.width = 2048;
@@ -523,7 +647,7 @@
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
       }
 
-      // Draw stylized continents (Eurasia, Africa, Australia, Americas)
+      // Draw stylized continents (Eurasia, Africa)
       function drawPoly(coords, color) {
         ctx.fillStyle = color;
         ctx.beginPath();
@@ -607,14 +731,14 @@
       // Area Name Text
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'left';
-      const fontSize = areaObj.name.length > 16 ? 34 : 40;
+      const fontSize = areaObj.name.length > 17 ? 32 : 38;
       ctx.font = `bold ${fontSize}px Inter, sans-serif`;
       ctx.fillText(areaObj.name.toUpperCase(), 36, 138);
 
       // Subtitle
       ctx.fillStyle = '#e2e8f0';
       ctx.font = '500 20px Inter, sans-serif';
-      ctx.fillText(`WAYPOINT ${areaObj.id + 1} OF 12`, 36, 192);
+      ctx.fillText(`WAYPOINT ${areaObj.id + 1} OF ${NAMED_AREAS.length}`, 36, 192);
 
       const tex = new THREE.CanvasTexture(canvas);
       tex.needsUpdate = true;
@@ -644,9 +768,6 @@
       controls.minDistance = 104.5;
       controls.maxDistance = 360;
       controls.rotateSpeed = 0.65;
-
-      // Cancel auto-chase if user manually grabs globe during chase mode?
-      // Better: allow user to orbit around ship in chase mode!
 
       // Starfield Background
       createStarfield();
@@ -682,6 +803,11 @@
 
       // Event Listeners
       window.addEventListener('resize', onWindowResize);
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isCleanMode) {
+          toggleCleanMode();
+        }
+      });
       setupScrubber();
 
       // Hide loading screen smoothly
@@ -737,7 +863,7 @@
         shininess: 18
       });
 
-      // Load realistic NASA Blue Marble satellite texture via Three.js example CDN
+      // Load realistic NASA Blue Marble satellite texture
       const texLoader = new THREE.TextureLoader();
       texLoader.setCrossOrigin('anonymous');
       texLoader.load(
@@ -747,9 +873,7 @@
           earthMat.needsUpdate = true;
         },
         undefined,
-        () => {
-          // Keep clean procedural fallback texture if offline
-        }
+        () => {}
       );
 
       // Load bump map for terrain relief
@@ -810,14 +934,13 @@
     }
 
     function buildMaritimeRoute() {
-      // Convert sea route nodes to 3D points slightly above ocean surface
       const points = SEA_ROUTE_NODES.map(node => latLonToVector3(node.lat, node.lon, GLOBE_RADIUS + 0.14));
 
       // CatmullRomCurve3 with centripetal parameterization prevents overshoot loops into land
       routeCurve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.35);
 
       // Full route line (translucent cyan shipping lane)
-      const tubeGeo = new THREE.TubeGeometry(routeCurve, 650, 0.12, 8, false);
+      const tubeGeo = new THREE.TubeGeometry(routeCurve, 700, 0.12, 8, false);
       const tubeMat = new THREE.MeshBasicMaterial({
         color: 0x38bdf8,
         transparent: true,
@@ -826,8 +949,8 @@
       routeTube = new THREE.Mesh(tubeGeo, tubeMat);
       earthGroup.add(routeTube);
 
-      // Compute exact curve parameter `t` for each of the 12 named maritime areas
-      const sampledPoints = routeCurve.getSpacedPoints(1200);
+      // Compute exact curve parameter `t` for each of the 14 named maritime areas
+      const sampledPoints = routeCurve.getSpacedPoints(1800);
       areaTriggers = NAMED_AREAS.map(area => {
         const targetVec = latLonToVector3(area.lat, area.lon, GLOBE_RADIUS + 0.14);
         let bestIdx = 0;
@@ -841,7 +964,7 @@
         }
         return {
           areaId: area.id,
-          t: bestIdx / 1200
+          t: bestIdx / 1800
         };
       });
 
@@ -849,7 +972,7 @@
       areaTriggers[0].t = 0.0;
       areaTriggers[areaTriggers.length - 1].t = 0.996;
 
-      // Place 3D Beacon Markers & Mini Globe Flags at each of the 12 maritime areas
+      // Place 3D Beacon Markers & Mini Globe Flags at each of the 14 maritime areas
       NAMED_AREAS.forEach((area) => {
         const pos = latLonToVector3(area.lat, area.lon, GLOBE_RADIUS + 0.12);
         const normal = pos.clone().normalize();
@@ -885,7 +1008,7 @@
           side: THREE.DoubleSide
         });
         const flagMesh = new THREE.Mesh(flagGeo, flagMat);
-        flagMesh.scale.set(0.01, 0.01, 0.01); // Hidden until reached
+        flagMesh.scale.set(0.01, 0.01, 0.01);
         markerGroup.add(flagMesh);
 
         earthGroup.add(markerGroup);
@@ -896,7 +1019,6 @@
     function buildContainership() {
       shipGroup = new THREE.Group();
 
-      // Scale factor so vessel is clearly visible on the 100-radius globe while maintaining sleek proportions
       const s = 0.24;
       const vesselModel = new THREE.Group();
       vesselModel.scale.set(s, s, s);
@@ -960,7 +1082,6 @@
       const containerColors = [0x0284c7, 0xdc2626, 0x059669, 0xd97706, 0x4f46e5, 0xe11d48, 0x0d9488];
       const containerGeo = new THREE.BoxGeometry(0.52, 0.42, 1.15);
 
-      // Forward stacks (4 bays) and Aft stacks (1 bay)
       const bayZPositions = [3.3, 2.05, 0.8, -0.45, -3.7];
       bayZPositions.forEach((zPos, bIdx) => {
         const tiers = zPos < -3 ? 2 : 3;
@@ -993,7 +1114,7 @@
 
       // Dynamic Flag Banner attached to the mast (rises from bottom to top of pole!)
       const flagGeo = new THREE.PlaneGeometry(3.6, 1.85, 12, 6);
-      flagGeo.translate(1.85, 0, 0); // Pivot at left hoist edge
+      flagGeo.translate(1.85, 0, 0);
       const flagMat = new THREE.MeshBasicMaterial({
         map: createFlagTexture(NAMED_AREAS[0]),
         side: THREE.DoubleSide
@@ -1050,11 +1171,11 @@
 
     function updateWaypointSidebarUI(activeIdx) {
       let raisedCount = 0;
+      const totalStops = NAMED_AREAS.length;
       NAMED_AREAS.forEach((_, idx) => {
         const isPassed = idx <= activeIdx;
         if (isPassed) raisedCount++;
 
-        // Update both desktop and mobile items
         document.querySelectorAll(`#wp-btn-${idx}`).forEach(btn => {
           if (idx === activeIdx) {
             btn.className = 'wp-item w-full text-left px-3 py-2.5 rounded-xl border transition-all flex items-center justify-between gap-2 bg-sky-500/20 border-sky-400/60 text-white shadow-md';
@@ -1080,19 +1201,33 @@
         });
       });
 
-      document.getElementById('flag-counter').textContent = `${raisedCount} / 12`;
-      document.getElementById('mobile-flag-count').textContent = `${raisedCount}/12`;
+      document.getElementById('flag-counter').textContent = `${raisedCount} / ${totalStops}`;
+      document.getElementById('mobile-flag-count').textContent = `${raisedCount}/${totalStops}`;
     }
 
     function triggerAreaFlag(areaId, showToast = true) {
       currentAreaId = areaId;
       const area = NAMED_AREAS[areaId];
 
+      // Trigger brief port-call pause when arriving at Istanbul (Bosporus)
+      if (areaId === 9 && !istanbulCallCompleted && isPlaying) {
+        istanbulCallCompleted = true;
+        holdPauseTimer = 2.6;
+        holdBadgeLabel = 'PORT CALL • IST';
+      }
+
+      // Trigger brief anchorage hold when arriving at North Sea Anchorage (Wandelaar)
+      if (areaId === 13 && !anchorageCompleted && isPlaying) {
+        anchorageCompleted = true;
+        holdPauseTimer = 2.2;
+        holdBadgeLabel = 'AT ANCHOR • ANC';
+      }
+
       // 1. Update 3D Ship Mast Flag texture and trigger hoisting animation
       if (mastFlagMesh) {
         mastFlagMesh.material.map = createFlagTexture(area);
         mastFlagMesh.material.needsUpdate = true;
-        flagRaiseAnim = 0.0; // Start hoisting from bottom of mast!
+        flagRaiseAnim = 0.0;
       }
 
       // 2. Raise all globe flags up to this waypoint
@@ -1116,29 +1251,53 @@
 
       updateWaypointSidebarUI(areaId);
 
-      // 4. Show animated HUD toast banner
-      if (showToast) {
+      // 4. Show dramatic top-center notification banner
+      if (showToast && !isCleanMode) {
         const banner = document.getElementById('flag-banner');
         document.getElementById('flag-banner-title').textContent = area.name;
-        document.getElementById('flag-banner-sub').textContent = `Checkpoint ${area.id + 1} of 12 • ${area.desc}`;
+        document.getElementById('flag-banner-sub').textContent = `Waypoint ${areaId + 1} of ${NAMED_AREAS.length} • ${area.desc}`;
 
         banner.classList.remove('hidden');
-        // Restart CSS animation
-        const card = banner.firstElementChild;
-        card.classList.remove('flag-toast-enter');
-        void card.offsetWidth;
-        card.classList.add('flag-toast-enter');
+        const inner = banner.firstElementChild;
+        inner.classList.remove('flag-toast-enter');
+        void inner.offsetWidth;
+        inner.classList.add('flag-toast-enter');
 
         if (bannerTimeout) clearTimeout(bannerTimeout);
         bannerTimeout = setTimeout(() => {
           banner.classList.add('hidden');
-        }, 3800);
+        }, 3200);
       }
     }
 
     // =========================================================================
-    // 4. SIMULATION CONTROLS & CAMERA MODES
+    // 4. CAMERA, PLAYBACK & UI CONTROLS
     // =========================================================================
+    function setCameraMode(mode) {
+      cameraMode = mode;
+      document.querySelectorAll('.cam-btn').forEach(btn => {
+        btn.className = 'cam-btn px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5';
+      });
+      const activeBtn = document.getElementById(`cam-${mode}`);
+      if (activeBtn) {
+        activeBtn.className = 'cam-btn px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 bg-sky-500 text-slate-950 font-semibold shadow-md shadow-sky-500/30';
+      }
+      if (mode === 'orbit') {
+        controls.target.set(0, 0, 0);
+      }
+    }
+
+    function setSpeed(mult) {
+      speedMultiplier = mult;
+      document.querySelectorAll('.speed-btn').forEach(btn => {
+        if (Number(btn.dataset.speed) === mult) {
+          btn.className = 'speed-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-semibold bg-sky-500 text-slate-950 transition-all';
+        } else {
+          btn.className = 'speed-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-semibold text-slate-300 hover:text-white transition-all';
+        }
+      });
+    }
+
     function togglePlayPause() {
       if (progressT >= 0.999 && !isPlaying) {
         progressT = 0;
@@ -1171,35 +1330,37 @@
     function restartVoyage() {
       progressT = 0;
       isPlaying = true;
+      holdPauseTimer = 0;
+      holdBadgeLabel = '';
+      istanbulCallCompleted = false;
+      anchorageCompleted = false;
       updatePlayPauseUI();
       triggerAreaFlag(0, true);
     }
 
-    function setSpeed(mult) {
-      speedMultiplier = mult;
-      document.querySelectorAll('.speed-btn').forEach(btn => {
-        const s = Number(btn.getAttribute('data-speed'));
-        if (s === mult) {
-          btn.className = 'speed-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-semibold bg-sky-500 text-slate-950 transition-all';
-        } else {
-          btn.className = 'speed-btn px-2.5 py-1 rounded-lg text-xs font-mono-tech font-semibold text-slate-300 hover:text-white transition-all';
-        }
-      });
-    }
+    function toggleCleanMode() {
+      isCleanMode = !isCleanMode;
+      const header = document.querySelector('header');
+      const sidebar = document.getElementById('sidebar-panel');
+      const telemetry = document.getElementById('telemetry-panel');
+      const footer = document.getElementById('bottom-controls');
+      const mobileBtn = document.getElementById('mobile-list-btn');
+      const exitBtn = document.getElementById('exit-clean-btn');
 
-    function setCameraMode(mode) {
-      cameraMode = mode;
-      ['chase', 'top', 'orbit'].forEach(m => {
-        const btn = document.getElementById(`cam-${m}`);
-        if (m === mode) {
-          btn.className = 'cam-btn px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 bg-sky-500 text-slate-950 font-semibold shadow-md shadow-sky-500/30';
-        } else {
-          btn.className = 'cam-btn px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5';
-        }
-      });
-
-      if (mode === 'orbit') {
-        controls.target.set(0, 0, 0);
+      if (isCleanMode) {
+        header.classList.add('hidden');
+        sidebar.classList.remove('lg:flex');
+        telemetry.classList.remove('sm:flex');
+        footer.classList.add('hidden');
+        mobileBtn.classList.add('hidden');
+        exitBtn.classList.remove('hidden');
+      } else {
+        header.classList.remove('hidden');
+        sidebar.classList.add('lg:flex');
+        telemetry.classList.add('sm:flex');
+        footer.classList.remove('hidden');
+        mobileBtn.classList.remove('hidden');
+        exitBtn.classList.add('hidden');
       }
     }
 
@@ -1207,6 +1368,14 @@
       const trig = areaTriggers[areaIdx];
       if (!trig) return;
       progressT = trig.t;
+      if (areaIdx < 9) {
+        istanbulCallCompleted = false;
+      }
+      if (areaIdx < 13) {
+        anchorageCompleted = false;
+      }
+      holdPauseTimer = 0;
+      holdBadgeLabel = '';
       triggerAreaFlag(areaIdx, true);
       document.getElementById('voyage-scrubber').value = Math.round(progressT * 1000);
 
@@ -1227,7 +1396,6 @@
       const scrubber = document.getElementById('voyage-scrubber');
       scrubber.addEventListener('input', (e) => {
         progressT = Number(e.target.value) / 1000;
-        // Determine matching area
         let matchedArea = 0;
         for (let i = 0; i < areaTriggers.length; i++) {
           if (progressT >= areaTriggers[i].t - 0.002) {
@@ -1247,18 +1415,33 @@
     let wakeIndex = 0;
 
     function updateShipAndTelemetry(dt, elapsed) {
-      if (isPlaying) {
-        // Base voyage duration ~65 seconds at 1x speed
-        const baseRate = 0.015;
-        progressT += baseRate * speedMultiplier * dt;
+      const statusBadge = document.getElementById('vessel-status-badge');
 
-        if (progressT >= 1.0) {
-          progressT = 1.0;
-          isPlaying = false;
-          triggerAreaFlag(11, true);
-          updatePlayPauseUI();
+      if (isPlaying) {
+        if (holdPauseTimer > 0) {
+          // Vessel holds briefly at Istanbul port call or North Sea Anchorage
+          holdPauseTimer -= dt;
+          statusBadge.textContent = holdBadgeLabel;
+          statusBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/25 text-amber-300 border border-amber-500/40';
+        } else {
+          // Base voyage duration ~68 seconds at 1x speed
+          const baseRate = 0.0145;
+          progressT += baseRate * speedMultiplier * dt;
+
+          if (holdBadgeLabel !== '') {
+            holdBadgeLabel = '';
+            statusBadge.textContent = 'UNDERWAY';
+            statusBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          }
+
+          if (progressT >= 1.0) {
+            progressT = 1.0;
+            isPlaying = false;
+            triggerAreaFlag(NAMED_AREAS.length - 1, true);
+            updatePlayPauseUI();
+          }
+          document.getElementById('voyage-scrubber').value = Math.round(progressT * 1000);
         }
-        document.getElementById('voyage-scrubber').value = Math.round(progressT * 1000);
       }
 
       // Check area boundary crossings
@@ -1297,12 +1480,10 @@
         flagRaiseAnim = Math.min(1.0, flagRaiseAnim + dt * 2.2);
       }
       if (mastFlagMesh) {
-        // Ease-out hoisting from y = 3.4 to y = 6.0 on the ship's mast
         const ease = 1 - Math.pow(1 - flagRaiseAnim, 3);
         mastFlagMesh.position.y = 3.4 + ease * 2.6;
         mastFlagMesh.scale.setScalar(0.35 + ease * 0.65);
 
-        // Wind flutter wave on flag vertices
         const posAttr = mastFlagMesh.geometry.attributes.position;
         for (let i = 0; i < posAttr.count; i++) {
           const vx = posAttr.getX(i);
@@ -1321,8 +1502,8 @@
         pin.flagMesh.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), dt * 6);
       });
 
-      // Spawn White Ocean Wake Particles behind stern
-      if (isPlaying) {
+      // Spawn White Ocean Wake Particles behind stern (only when moving)
+      if (isPlaying && holdPauseTimer <= 0) {
         wakeSpawnTimer += dt * speedMultiplier;
         if (wakeSpawnTimer > 0.06) {
           wakeSpawnTimer = 0;
@@ -1377,7 +1558,6 @@
       const callout = document.getElementById('ship-flag-callout');
       const mastTopWorld = shipPos.clone().add(upNormal.clone().multiplyScalar(1.95));
 
-      // Check if ship is on the front hemisphere facing the camera
       const toCam = camera.position.clone().sub(mastTopWorld).normalize();
       const facing = upNormal.dot(toCam);
 
@@ -1397,7 +1577,6 @@
 
     function updateCameraPosition(shipPos, upNormal, forwardVec, dt) {
       if (cameraMode === 'chase') {
-        // Smooth 3D aerial chase camera trailing slightly behind and above the vessel
         const desiredTarget = shipPos.clone();
         controls.target.lerp(desiredTarget, Math.min(1, dt * 6));
 
@@ -1407,7 +1586,6 @@
 
         camera.position.lerp(desiredCamPos, Math.min(1, dt * 3.5));
       } else if (cameraMode === 'top') {
-        // High-altitude Google Earth satellite overview centered over the ship
         const desiredTarget = shipPos.clone();
         controls.target.lerp(desiredTarget, Math.min(1, dt * 6));
 
@@ -1428,7 +1606,6 @@
       const dt = Math.min(clock.getDelta(), 0.1);
       const elapsed = clock.getElapsedTime();
 
-      // Slowly drift cloud layer
       const clouds = earthGroup.getObjectByName('cloudLayer');
       if (clouds) {
         clouds.rotation.y += dt * 0.004;
